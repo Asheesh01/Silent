@@ -1,0 +1,8 @@
+/* Allow hover to stay active even when mouse is inside Post */
+.post-wrapper {
+  pointer-events: none;
+}
+
+.post-wrapper * {
+  pointer-events: auto;
+}

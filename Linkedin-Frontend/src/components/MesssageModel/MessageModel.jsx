@@ -4,12 +4,17 @@ import React, { useState } from "react";
 export default function MessageModal({ selfData, userData }) {
     const [message, setMessage] = useState('')
     const handleSendMessage = async () => {
-        await axios.post('http://localhost:5000/api/conversation/add-conversation', { recieverId: userData?._id, message }, { withCredentials: true }).then((res => {
+        try {
+            await axios.post(
+                `${import.meta.env.VITE_APP_BACKEND_URL}/api/conversation/add-conversation`,
+                { recieverId: userData?._id, message },
+                { withCredentials: true }
+            );
             window.location.reload();
-        })).catch(err => {
-            console.log(err)
-            alert(err?.res?.data?.error)
-        })
+        } catch (err) {
+            console.log(err);
+            alert(err?.response?.data?.error || 'Message failed');
+        }
     }
 
     return (

@@ -16,7 +16,7 @@ export default function MyNetwork() {
     };
 
     const fetchfriendList = async () => {
-        await axios.get("http://localhost:5000/api/auth/friendList", { withCredentials: true })
+        await axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/friendList`, { withCredentials: true })
             .then((res) => {
                 console.log(res);
                 setData(res.data.friends);
@@ -28,7 +28,7 @@ export default function MyNetwork() {
     };
 
     const fetchPendingRequest = async () => {
-        await axios.get("http://localhost:5000/api/auth/pendingfriendList", { withCredentials: true })
+        await axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/pendingfriendList`, { withCredentials: true })
             .then((res) => {
                 console.log(res);
                 setData(res.data.pending_friends);

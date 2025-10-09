@@ -22,12 +22,12 @@ export default function Feeds() {
   const fetchData = async () => {
     try {
       const userData = await axios.get(
-        'http://localhost:5000/api/auth/self',
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/self`,
         { withCredentials: true }
       );
 
       const postData = await axios.get(
-        `http://localhost:5000/api/post/getAllPost/${userData.data.user._id}`
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/post/getAllPost/${userData.data.user._id}`
       );
 
       setPersonaltData(userData.data.user);

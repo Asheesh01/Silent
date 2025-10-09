@@ -14,7 +14,7 @@ export default function Notification() {
 
     const fetchNotificationData = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/Notification', { 
+            const res = await axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/Notification`, { 
                 withCredentials: true 
             });
             setNotification(res.data.notification);
@@ -35,7 +35,7 @@ export default function Notification() {
     const handleOnClickNotification = async (item) => {
         try {
             await axios.put(
-                'http://localhost:5000/api/Notification/isRead',
+                `${import.meta.env.VITE_APP_BACKEND_URL}/api/Notification/isRead`,
                 { notificationId: item._id },
                 { withCredentials: true }
             );
@@ -175,7 +175,7 @@ export default function Notification() {
 
     return (
         <motion.div 
-            className="flex mt-5 py-9 w-full bg-purple-200 px-[50px] xl-px-[250px]"
+            className="min-h-screen flex mt-5 py-9 w-full bg-purple-200 px-[50px] xl:px-[250px]"
             variants={containerVariants}
             initial="hidden"
             animate="visible"

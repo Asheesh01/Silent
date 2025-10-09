@@ -5,6 +5,7 @@ const messagecontroller=require("../controller/message");
 
 router.post("/",authenticatins.auth,messagecontroller.sendMessage);
 router.get('/:convId',authenticatins.auth,messagecontroller.getMessage);
+router.delete("/:messageId",authenticatins.auth,messagecontroller.deleteMessage);
 
 
 module.exports=router;

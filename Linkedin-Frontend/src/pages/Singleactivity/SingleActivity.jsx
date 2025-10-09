@@ -16,7 +16,7 @@ export default function SingleActivity() {
 
     const fetchDataOnLoad = async () => {
         try {
-            const res = await axios.get(`http://localhost:5000/api/post/getPostById/${postId}`);
+            const res = await axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/post/getPostById/${postId}`);
             console.log(res);
             setPost(res.data.post);
         } catch (err) {

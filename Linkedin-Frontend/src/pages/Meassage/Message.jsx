@@ -19,6 +19,7 @@ export default function Message() {
   const [loading, setLoading] = useState(false);
   const [imageLink, setImageLink] = useState(null);
   const [messagetext, setMessagetext] = useState('');
+  const [contextMenu, setContextMenu] = useState(null);
 
   const ref = useRef();
 
@@ -41,7 +42,7 @@ export default function Message() {
   const fetchMessages = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/message/${activeConID}`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/message/${activeConID}`,
         { withCredentials: true }
       );
       setMeesages(res.data.message);
@@ -60,7 +61,7 @@ export default function Message() {
   const fetchConversationonLoad = async () => {
     try {
       const res = await axios.get(
-        'http://localhost:5000/api/conversation/get-conversation',
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/conversation/get-conversatio`,
         { withCredentials: true }
       );
       setConversation(res.data.conversastion);
@@ -107,6 +108,10 @@ export default function Message() {
     socket.on('recieveMessage', (response) => {
       setMeesages((prev) => [...prev, response]);
     });
+
+    return () => {
+      socket.off('recieveMessage');
+    };
   }, []);
 
   const haandleSendMessage = async () => {
@@ -114,7 +119,7 @@ export default function Message() {
 
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/message`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/message`,
         {
           conversation: activeConID,
           message: messagetext,
@@ -131,6 +136,56 @@ export default function Message() {
       alert('Something Went Wrong');
     }
   };
+
+  // Handle right-click context menu
+  const handleContextMenu = (e, messageId) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      messageId: messageId
+    });
+  };
+
+  // Close context menu when clicking anywhere
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
+  // Delete message function
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/message/${messageId}`,
+        { withCredentials: true }
+      );
+
+      // Update local state to remove the message
+      setMeesages((prev) => prev.filter((msg) => msg._id !== messageId));
+      
+      // Emit socket event to notify other users
+      socket.emit('deleteMessage', activeConID, messageId);
+      
+      toast.success('Message deleted successfully');
+      setContextMenu(null);
+    } catch (err) {
+      console.error('Delete failed:', err);
+      toast.error('Failed to delete message');
+    }
+  };
+
+  // Listen for deleted messages from socket
+  useEffect(() => {
+    socket.on('messageDeleted', (messageId) => {
+      setMeesages((prev) => prev.filter((msg) => msg._id !== messageId));
+    });
+
+    return () => {
+      socket.off('messageDeleted');
+    };
+  }, []);
 
   // Animation Variants
   const containerVariants = {
@@ -195,6 +250,20 @@ export default function Message() {
         repeat: Infinity,
         ease: "easeInOut"
       }
+    }
+  };
+
+  const contextMenuVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { type: 'spring', stiffness: 300, damping: 25 }
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.8,
+      transition: { duration: 0.15 }
     }
   };
 
@@ -346,6 +415,7 @@ export default function Message() {
                           initial="hidden"
                           animate="visible"
                           exit={{ opacity: 0, x: -30, transition: { duration: 0.3 } }}
+                          onContextMenu={(e) => handleContextMenu(e, item._id)}
                           whileHover={{ 
                             backgroundColor: 'rgba(0,0,0,0.02)',
                             scale: 1.01,
@@ -518,6 +588,33 @@ export default function Message() {
           </div>
         </motion.div>
       </div>
+
+      {/* Context Menu */}
+      <AnimatePresence>
+        {contextMenu && (
+          <motion.div
+            className="fixed bg-white shadow-lg rounded-lg border border-gray-200 py-2 z-50"
+            style={{
+              top: contextMenu.y,
+              left: contextMenu.x,
+            }}
+            variants={contextMenuVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <motion.button
+              className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 font-medium"
+              onClick={() => handleDeleteMessage(contextMenu.messageId)}
+              whileHover={{ backgroundColor: '#fee2e2', x: 4 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Delete Message
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <ToastContainer />
     </motion.div>
   );

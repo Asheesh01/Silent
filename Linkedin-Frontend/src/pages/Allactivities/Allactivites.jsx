@@ -15,7 +15,7 @@ export default function Allactivities() {
     const [ownData, setOwnData] = useState(null);
 
     const fetchDataonLoad = async () => {
-        await axios.get(`http://localhost:5000/api/post/UserPost/${id}`).then(res => {
+        await axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/post/UserPost/${id}`).then(res => {
             console.log(res);
             setPost(res.data.posts);
         }).catch(err => {

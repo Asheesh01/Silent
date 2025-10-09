@@ -28,3 +28,21 @@ try{
         return res.status(500).json({ error: "server error", message: err.message });
     }
     }
+
+    exports.deleteMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+
+    // Use the correct model name
+    const message = await messageModal.findByIdAndDelete(messageId);
+
+    if (!message) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Message deleted successfully" });
+  } catch (err) {
+    console.error('Delete failed:', err);
+    res.status(500).json({ error: "Server error", message: err.message });
+  }
+};

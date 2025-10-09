@@ -7,14 +7,21 @@
       const [imageUrl, setImageUrl] = useState(null);
       const [desc, setdesc] = useState("")
       const handlePost = async () => {
-        if (desc.trim().length === 0 && !imageUrl) return toast.error("Please enter any field");
-        await axios.post("http://localhost:5000/api/post",{desc:desc,image:imageUrl},{withCredentials:true}).then((res)=>{
-          window.location.reload();
-        }).catch (err=> {
-          console.error(err);
-          toast.error("Upload failed");
-      })
-    }
+  if (desc.trim().length === 0 && !imageUrl) return toast.error("Please enter any field");
+
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_APP_BACKEND_URL}/api/post`,
+      { desc: desc, image: imageUrl },
+      { withCredentials: true }
+    );
+    window.location.reload();
+  } catch (err) {
+    console.error(err);
+    toast.error("Upload failed");
+  }
+};
+
 
       const handleInputImage = async (e) => {
         const file = e.target.files[0];

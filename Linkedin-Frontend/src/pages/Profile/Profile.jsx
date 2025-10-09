@@ -50,9 +50,9 @@ export default function Profile() {
     const fetchDataonLoad = async () => {
         try {
             const [userDatas, postDatas, ownDatas] = await Promise.all([
-                axios.get(`http://localhost:5000/api/auth/user/${id}`),
-                axios.get(`http://localhost:5000/api/post/getTop5Post/${id}`),
-                axios.get('http://localhost:5000/api/auth/self', { withCredentials: true })
+                axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/user/${id}`),
+                axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/post/getTop5Post/${id}`),
+                axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/self`, { withCredentials: true })
             ])
 
             setUserData(userDatas.data.user);
@@ -104,7 +104,7 @@ export default function Profile() {
     }
 
     const handleEditFunc = async (data) => {
-        await axios.put(`http://localhost:5000/api/auth/update`, { user: data }, { withCredentials: true }).then(res => {
+        await axios.put(`${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/update`, { user: data }, { withCredentials: true }).then(res => {
             window.location.reload();
 
         }).catch(err => {
@@ -153,7 +153,7 @@ export default function Profile() {
         if (checkFriendStatus() === "Request Sent") return;
 
         if (checkFriendStatus() === "Connect") {
-            await axios.post('http://localhost:5000/api/auth/sendFriendReq', { receiver: userData?._id }, { withCredentials: true }).then(res => {
+            await axios.post(`${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/sendFriendReq`, { receiver: userData?._id }, { withCredentials: true }).then(res => {
                 toast.success(res.data.message)
                 setTimeout(() => {
                     window.location.reload();
@@ -165,7 +165,7 @@ export default function Profile() {
             })
         }
         else if (checkFriendStatus() == "Approve Request") {
-            await axios.post("http://localhost:5000/api/auth/acceptFriendRequest", { friendId: userData?._id }, { withCredentials: true }).then(res => {
+            await axios.post(`${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/acceptFriendRequest`, { friendId: userData?._id }, { withCredentials: true }).then(res => {
                 toast.success(res.data.message)
                 setTimeout(() => {
                     window.location.reload();
@@ -176,7 +176,7 @@ export default function Profile() {
             })
         }
         else {
-            await axios.delete(`http://localhost:5000/api/auth/removeFromFriendList/${userData?._id}`, { withCredentials: true }).then(res => {
+            await axios.delete(`${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/removeFromFriendList/${userData?._id}`, { withCredentials: true }).then(res => {
                 toast.success(res.data.message)
                 setTimeout(() => {
                     window.location.reload();
@@ -189,7 +189,7 @@ export default function Profile() {
     }
 
     const handleLogout = async () => {
-        await axios.post(`http://localhost:5000/api/auth/logout`, {}, { withCredentials: true }).then((res => {
+        await axios.post(`${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/logout`, {}, { withCredentials: true }).then((res => {
             localStorage.clear();
             window.location.reload();
         })).catch(err => {
@@ -201,7 +201,7 @@ export default function Profile() {
 
     const copyToClipBoard = async () => {
         try {
-            let string = `http://localhost:5173/profile/${id}`
+            let string = `${import.meta.env.VITE_APP_BACKEND_URL}/profile/${id}`
             await navigator.clipboard.writeText(string);
             toast.success('copied to Clipboard')
         } catch (err) {

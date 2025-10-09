@@ -16,7 +16,7 @@ export default function Signup(props) {
         if (registerField.email.trim().length === 0 || registerField.password.trim().length === 0 || registerField.f_name.trim().length === 0) {
             return toast.error("Please Fill All Details. ")
         }
-        await axios.post("http://localhost:5000/api/auth/register", registerField).then(res => {
+        await axios.post(`${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/register`, registerField).then(res => {
             toast.success("you have register successfully");
             setRegisterField({ ...registerField, email: "", password: "", f_name: "" })
             navigate('/login')

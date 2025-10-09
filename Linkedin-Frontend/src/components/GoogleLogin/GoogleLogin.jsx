@@ -8,7 +8,11 @@ export default function GoogleLoginComp(props) {
 
     const handleOnSuccess = async (credResponse) => {
         const token=credResponse.credential;
-        const res=await axios.post('http://localhost:5000/api/auth/google',{token},{withCredentials:true});
+       const res = await axios.post(
+  `${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/google`,
+  { token },
+  { withCredentials: true }
+);
         // console.log(res);
         localStorage.setItem('isLogin','true');
         localStorage.setItem('userInfo',JSON.stringify(res.data.user));

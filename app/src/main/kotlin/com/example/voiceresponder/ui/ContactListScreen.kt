@@ -15,6 +15,7 @@ import androidx.navigation.NavController
 import androidx.room.Room
 import com.example.voiceresponder.data.AppDatabase
 import com.example.voiceresponder.data.ContactEntity
+import com.example.voiceresponder.data.normalizePhone
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,7 +60,8 @@ fun ContactListScreen(navController: NavController) {
                     confirmButton = {
                         TextButton(onClick = {
                             scope.launch {
-                                contactDao.addContact(ContactEntity(newNumber))
+                                val normalized = normalizePhone(newNumber)
+                                contactDao.addContact(ContactEntity(normalized))
                                 contacts = contactDao.getAllContacts()
                                 showDialog = false
                                 newNumber = ""

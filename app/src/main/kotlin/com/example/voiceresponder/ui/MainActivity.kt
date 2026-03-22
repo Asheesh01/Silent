@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
             PersonalizedVoiceResponderTheme {
                 val permissions = mutableListOf(
                     Manifest.permission.READ_PHONE_STATE,
+                    Manifest.permission.READ_CALL_LOG,
                     Manifest.permission.RECORD_AUDIO,
                     Manifest.permission.SEND_SMS,
                     Manifest.permission.READ_CONTACTS

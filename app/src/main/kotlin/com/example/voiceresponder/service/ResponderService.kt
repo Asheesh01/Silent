@@ -16,6 +16,7 @@ import com.example.voiceresponder.remote.TranslationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.example.voiceresponder.data.normalizePhone
 import java.io.File
 
 class ResponderService : Service() {
@@ -60,9 +61,13 @@ class ResponderService : Service() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // Normalize number to last 10 digits for consistent matching
+                val normalizedNumber = normalizePhone(phoneNumber)
+                Log.d(TAG, "Normalized incoming: $phoneNumber → $normalizedNumber")
+
                 // Only respond to whitelisted contacts
-                if (!contactDao.isContactSelected(phoneNumber)) {
-                    Log.d(TAG, "Not in whitelist — ignoring: $phoneNumber")
+                if (!contactDao.isContactSelected(normalizedNumber)) {
+                    Log.d(TAG, "Not in whitelist — ignoring: $normalizedNumber")
                     return@launch
                 }
 
@@ -75,7 +80,14 @@ class ResponderService : Service() {
                 // ── 1. Upload audio to Cloudinary (free, no billing required) ──
                 val downloadUrl = cloudinaryHelper.uploadAudio(voiceFile)
                 if (downloadUrl == null) {
-                    Log.e(TAG, "Cloudinary upload failed")
+                    Log.w(TAG, "Cloudinary upload failed — sending text-only SMS fallback")
+                    // Fallback: send a simple text SMS so caller is not left hanging
+                    smsHelper.sendAudioLink(
+                        phoneNumber = phoneNumber,
+                        link        = "",
+                        englishText = "I missed your call. I'll get back to you soon.",
+                        hindiText   = "मैंने आपकी कॉल मिस कर दी। मैं जल्द वापस आऊंगा।"
+                    )
                     return@launch
                 }
                 Log.d(TAG, "Audio URL: $downloadUrl")

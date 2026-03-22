@@ -57,3 +57,6 @@ proguard/
 
 # Windows
 Thumbs.db
+
+# Java heap dumps
+*.hprof

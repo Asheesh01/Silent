@@ -1,49 +1,31 @@
 package com.example.voiceresponder.ui
 
-import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.PhoneAuthCredential
-import com.google.firebase.auth.PhoneAuthOptions
-import com.google.firebase.auth.PhoneAuthProvider
-import java.util.concurrent.TimeUnit
+import com.google.firebase.firestore.FirebaseFirestore
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavController) {
-    var phoneNumber by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf("") }
-    var isOtpSent by remember { mutableStateOf(false) }
-    var verificationId by remember { mutableStateOf("") }
-    
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var isSignUp by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     val auth = remember { FirebaseAuth.getInstance() }
-
-    val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-        override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-            // Auto-verification or instant validation
-            scopeSignIn(credential, auth, navController, context)
-        }
-
-        override fun onVerificationFailed(e: FirebaseException) {
-            Toast.makeText(context, "Verification Failed: ${e.message}", Toast.LENGTH_LONG).show()
-            isOtpSent = false
-        }
-
-        override fun onCodeSent(verificationIdStr: String, token: PhoneAuthProvider.ForceResendingToken) {
-            verificationId = verificationIdStr
-            isOtpSent = true
-            Toast.makeText(context, "OTP Sent", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -56,62 +38,100 @@ fun LoginScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = phoneNumber,
-            onValueChange = { phoneNumber = it },
-            label = { Text("Phone Number (with +country code)") },
-            modifier = Modifier.fillMaxWidth()
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email Address") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
-        if (isOtpSent) {
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = otp,
-                onValueChange = { otp = it },
-                label = { Text("OTP") },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = {
-                if (!isOtpSent) {
-                    if (phoneNumber.isNotEmpty()) {
-                        val options = PhoneAuthOptions.newBuilder(auth)
-                            .setPhoneNumber(phoneNumber)
-                            .setTimeout(60L, TimeUnit.SECONDS)
-                            .setActivity(context as Activity)
-                            .setCallbacks(callbacks)
-                            .build()
-                        PhoneAuthProvider.verifyPhoneNumber(options)
-                    } else {
-                        Toast.makeText(context, "Please enter phone number", Toast.LENGTH_SHORT).show()
-                    }
+                if (email.isBlank() || password.isBlank()) {
+                    Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                if (password.length < 6) {
+                    Toast.makeText(context, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                isLoading = true
+                if (isSignUp) {
+                    auth.createUserWithEmailAndPassword(email.trim(), password)
+                        .addOnCompleteListener { task ->
+                            isLoading = false
+                            if (task.isSuccessful) {
+                                navController.navigate("setup_phone") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            } else {
+                                Toast.makeText(context, "Sign Up Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
                 } else {
-                    if (otp.isNotEmpty() && verificationId.isNotEmpty()) {
-                        val credential = PhoneAuthProvider.getCredential(verificationId, otp)
-                        scopeSignIn(credential, auth, navController, context)
-                    }
+                    auth.signInWithEmailAndPassword(email.trim(), password)
+                        .addOnCompleteListener { task ->
+                            isLoading = false
+                            if (task.isSuccessful) {
+                                val uid = auth.currentUser?.uid ?: return@addOnCompleteListener
+                                FirebaseFirestore.getInstance()
+                                    .collection("users").document(uid).get()
+                                    .addOnSuccessListener { doc ->
+                                        val phoneNumber = doc.getString("phoneNumber")
+                                        if (phoneNumber.isNullOrEmpty()) {
+                                            navController.navigate("setup_phone") {
+                                                popUpTo("login") { inclusive = true }
+                                            }
+                                        } else {
+                                            navController.navigate("dashboard") {
+                                                popUpTo("login") { inclusive = true }
+                                            }
+                                        }
+                                    }
+                                    .addOnFailureListener {
+                                        navController.navigate("setup_phone") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
+                                    }
+                            } else {
+                                Toast.makeText(context, "Sign In Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         ) {
-            Text(if (isOtpSent) "Verify OTP" else "Send OTP")
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(if (isSignUp) "Create Account" else "Sign In")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        TextButton(onClick = { isSignUp = !isSignUp }) {
+            Text(if (isSignUp) "Already have an account? Sign In" else "Don't have an account? Sign Up")
         }
     }
 }
-
-private fun scopeSignIn(credential: PhoneAuthCredential, auth: FirebaseAuth, navController: NavController, context: android.content.Context) {
-    auth.signInWithCredential(credential)
-        .addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                navController.navigate("dashboard") {
-                    popUpTo("login") { inclusive = true }
-                }
-            } else {
-                Toast.makeText(context, "Sign In Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-}
-

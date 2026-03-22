@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "528978961799",
-    "project_id": "my-app-7a397",
-    "storage_bucket": "my-app-7a397.firebasestorage.app"
+    "project_number": "163807062236",
+    "project_id": "personalizedvoiceresponder",
+    "storage_bucket": "personalizedvoiceresponder.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:528978961799:android:16cf8d6acb86228b2b1f22",
+        "mobilesdk_app_id": "1:163807062236:android:fde48a1a5a5639a278ec19",
         "android_client_info": {
           "package_name": "com.example.voiceresponder"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCHI1h2bWsfgjI5lnFHfMlfV8F7ePDvv00"
+          "current_key": "AIzaSyAtItgFVZk-gaQq_f1eA7J_R2HMD7JJKFo"
         }
       ],
       "services": {

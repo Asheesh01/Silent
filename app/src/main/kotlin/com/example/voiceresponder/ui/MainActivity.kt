@@ -56,16 +56,16 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-    val startDestination = if (auth.currentUser != null) "dashboard" else "login"
 
-    NavHost(navController = navController, startDestination = startDestination) {
-        composable("login") { LoginScreen(navController) }
+    NavHost(navController = navController, startDestination = "splash") {
+        composable("splash")      { SplashScreen(navController) }
+        composable("login")       { LoginScreen(navController) }
+        composable("signup")      { SignUpScreen(navController) }
         composable("setup_phone") { SetupPhoneScreen(navController) }
-        composable("dashboard") { DashboardScreen(navController) }
-        composable("contacts") { ContactListScreen(navController) }
-        composable("record") { RecordAudioScreen(navController) }
-        composable("settings") { SettingsScreen(navController) }
+        composable("dashboard")   { DashboardScreen(navController) }
+        composable("contacts")    { ContactListScreen(navController) }
+        composable("record")      { RecordAudioScreen(navController) }
+        composable("settings")    { SettingsScreen(navController) }
     }
 }
 

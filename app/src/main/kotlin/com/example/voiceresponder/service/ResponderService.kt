@@ -1,6 +1,7 @@
 package com.example.voiceresponder.service
 
 import android.app.*
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
@@ -53,19 +54,17 @@ class ResponderService : Service() {
     private fun processMissedCall(phoneNumber: String) {
         val database            = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "responder-db").build()
         val contactDao          = database.contactDao()
-        val cloudinaryHelper    = CloudinaryHelper()          // ← replaces Firebase Storage
-        val firebaseHelper      = FirebaseHelper()            // still used for checkUserExists / getFCMToken
+        val cloudinaryHelper    = CloudinaryHelper()
+        val firebaseHelper      = FirebaseHelper()
         val smsHelper           = SmsHelper(this)
-        val transcriptionHelper = TranscriptionHelper()          // ← AssemblyAI (free)
+        val transcriptionHelper = TranscriptionHelper()
         val translationHelper   = TranslationHelper()
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Normalize number to last 10 digits for consistent matching
                 val normalizedNumber = normalizePhone(phoneNumber)
                 Log.d(TAG, "Normalized incoming: $phoneNumber → $normalizedNumber")
 
-                // Only respond to whitelisted contacts
                 if (!contactDao.isContactSelected(normalizedNumber)) {
                     Log.d(TAG, "Not in whitelist — ignoring: $normalizedNumber")
                     return@launch
@@ -73,15 +72,20 @@ class ResponderService : Service() {
 
                 val voiceFile = File(filesDir, "default_response.mp4")
                 if (!voiceFile.exists()) {
-                    Log.e(TAG, "Voice file not found: ${voiceFile.absolutePath}")
+                    Log.w(TAG, "Voice file not found — sending text-only SMS fallback to $phoneNumber")
+                    smsHelper.sendAudioLink(
+                        phoneNumber = phoneNumber,
+                        link        = "",
+                        englishText = "I missed your call. I'll get back to you soon.",
+                        hindiText   = "मैंने आपकी कॉल मिस कर दी। मैं जल्द वापस आऊंगा।"
+                    )
                     return@launch
                 }
 
-                // ── 1. Upload audio to Cloudinary (free, no billing required) ──
+                // ── 1. Upload to Cloudinary ───────────────────────────────────
                 val downloadUrl = cloudinaryHelper.uploadAudio(voiceFile)
                 if (downloadUrl == null) {
-                    Log.w(TAG, "Cloudinary upload failed — sending text-only SMS fallback")
-                    // Fallback: send a simple text SMS so caller is not left hanging
+                    Log.w(TAG, "Cloudinary upload failed — sending text-only fallback")
                     smsHelper.sendAudioLink(
                         phoneNumber = phoneNumber,
                         link        = "",
@@ -92,28 +96,61 @@ class ResponderService : Service() {
                 }
                 Log.d(TAG, "Audio URL: $downloadUrl")
 
-                val isAppUser = firebaseHelper.checkUserExists(phoneNumber)
+                // ── 2. Send immediate SMS with audio link (caller doesn't wait) ──
+                smsHelper.sendAudioLink(phoneNumber = phoneNumber, link = downloadUrl)
+                Log.d(TAG, "Initial SMS sent — now transcribing…")
 
-                if (isAppUser) {
-                    // App user → FCM push (Cloud Function trigger in production)
-                    Log.d(TAG, "App user — FCM trigger ready")
-                } else {
-                    // ── 2. Transcribe voice message → English text ──
-                    val englishText = transcriptionHelper.transcribe(voiceFile)
-                    Log.d(TAG, "Transcript EN: $englishText")
-
-                    // ── 3. Translate English text → Hindi ──
-                    val hindiText = englishText?.let { translationHelper.translateToHindi(it) }
-                    Log.d(TAG, "Translation HI: $hindiText")
-
-                    // ── 4. Send enriched SMS: audio link + EN + HI ──
-                    smsHelper.sendAudioLink(
-                        phoneNumber = phoneNumber,
-                        link        = downloadUrl,
-                        englishText = englishText,
-                        hindiText   = hindiText
+                // ── 3a. Upload audio to AssemblyAI ───────────────────────────
+                val assemblyUrl = transcriptionHelper.uploadAudio(voiceFile)
+                if (assemblyUrl == null) {
+                    showDebugNotification(
+                        "❌ Step 1 FAILED: Upload",
+                        "Could not upload audio to AssemblyAI. API key may be invalid (HTTP 401) or network error. Key: bd148c..."
                     )
+                    return@launch
                 }
+                showDebugNotification("✅ Step 1 OK: Upload", assemblyUrl.take(80))
+
+                // ── 3b. Submit transcription job ─────────────────────────────
+                val transcriptId = transcriptionHelper.submitJob(assemblyUrl)
+                if (transcriptId == null) {
+                    showDebugNotification(
+                        "❌ Step 2 FAILED: Submit",
+                        transcriptionHelper.lastSubmitError.ifBlank { "Unknown error — check Logcat tag=TranscriptionHelper" }
+                    )
+                    return@launch
+                }
+                showDebugNotification("✅ Step 2 OK: Submit", "Job ID: $transcriptId")
+
+                // ── 3c. Poll for transcription result ────────────────────────
+                val englishText = transcriptionHelper.pollResult(transcriptId)
+                Log.d(TAG, "Transcript EN: $englishText")
+
+                if (englishText.isNullOrBlank()) {
+                    showDebugNotification(
+                        "❌ Step 3 FAILED: Poll",
+                        transcriptionHelper.lastPollError.ifBlank { "Empty transcript returned" }
+                    )
+                    return@launch
+                }
+                showDebugNotification("✅ Transcription OK", englishText.take(120))
+
+                // ── 4. Translate English → Hindi ──────────────────────────────
+                val hindiText = translationHelper.translateToHindi(englishText)
+                Log.d(TAG, "Translation HI: $hindiText")
+
+                // ── 5. Send follow-up SMS with transcription text ─────────────
+                smsHelper.sendAudioLink(
+                    phoneNumber = phoneNumber,
+                    link        = "",
+                    englishText = englishText,
+                    hindiText   = hindiText
+                )
+                Log.d(TAG, "Follow-up SMS with transcription sent")
+
+                val isAppUser = firebaseHelper.checkUserExists(phoneNumber)
+                Log.d(TAG, "Is app user: $isAppUser")
+
             } catch (e: Exception) {
                 Log.e(TAG, "processMissedCall error", e)
             } finally {
@@ -128,7 +165,27 @@ class ResponderService : Service() {
                 CHANNEL_ID, "Responder Service", NotificationManager.IMPORTANCE_LOW
             )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+
+            // Debug channel for transcription status
+            val debugChannel = NotificationChannel(
+                "TranscriptionDebug", "Transcription Debug", NotificationManager.IMPORTANCE_HIGH
+            )
+            getSystemService(NotificationManager::class.java).createNotificationChannel(debugChannel)
         }
+    }
+
+    /** Shows a notification on the device — no Logcat needed to diagnose failures. */
+    private fun showDebugNotification(title: String, message: String) {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notification = NotificationCompat.Builder(this, "TranscriptionDebug")
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        nm.notify(99, notification)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

@@ -1,57 +1,60 @@
 package com.example.voiceresponder.remote
 
 import android.util.Log
-import com.google.mlkit.nl.translate.TranslateLanguage
-import com.google.mlkit.nl.translate.Translation
-import com.google.mlkit.nl.translate.TranslatorOptions
-import kotlinx.coroutines.tasks.await
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
+import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
 
 /**
- * Provides on-device translation using ML Kit.
- * Supports Hindi ↔ English translation.
- * Language models are downloaded on first use (requires internet for the first time).
+ * Provides cloud-based translation using the MyMemory API (free, no API key needed).
+ * Much better translation quality than ML Kit for colloquial Hindi ↔ English.
+ * Requires internet connection.
  */
 class TranslationHelper {
 
     private val TAG = "TranslationHelper"
 
-    /**
-     * Translates [text] from Hindi to English.
-     * Use this when AssemblyAI returns a Hindi transcript that needs to be shown in English.
-     * Must be called from a coroutine (suspend function).
-     */
-    suspend fun translateToEnglish(text: String): String? = translate(
-        text = text,
-        sourceLang = TranslateLanguage.HINDI,
-        targetLang = TranslateLanguage.ENGLISH
-    )
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .build()
 
     /**
-     * Translates [text] from English to Hindi.
+     * Translates [text] from Hindi to English using MyMemory API.
      * Returns the translated string, or null on failure.
-     * Must be called from a coroutine (suspend function).
      */
-    suspend fun translateToHindi(text: String): String? = translate(
-        text = text,
-        sourceLang = TranslateLanguage.ENGLISH,
-        targetLang = TranslateLanguage.HINDI
-    )
+    fun translateToEnglish(text: String): String? = translate(text, from = "hi", to = "en")
 
-    private suspend fun translate(text: String, sourceLang: String, targetLang: String): String? {
+    /**
+     * Translates [text] from English to Hindi using MyMemory API.
+     * Returns the translated string, or null on failure.
+     */
+    fun translateToHindi(text: String): String? = translate(text, from = "en", to = "hi")
+
+    private fun translate(text: String, from: String, to: String): String? {
         return try {
-            val options = TranslatorOptions.Builder()
-                .setSourceLanguage(sourceLang)
-                .setTargetLanguage(targetLang)
-                .build()
+            val encoded = URLEncoder.encode(text, "UTF-8")
+            val url = "https://api.mymemory.translated.net/get?q=$encoded&langpair=$from|$to"
 
-            val translator = Translation.getClient(options)
+            val request = Request.Builder().url(url).build()
+            val responseStr = client.newCall(request).execute().use { it.body?.string() }
 
-            // Download model if not already downloaded
-            translator.downloadModelIfNeeded().await()
+            Log.d(TAG, "MyMemory response: $responseStr")
 
-            val result = translator.translate(text).await()
-            translator.close()
-            result
+            val json = JSONObject(responseStr ?: return null)
+            val translated = json
+                .optJSONObject("responseData")
+                ?.optString("translatedText")
+                ?.takeIf { it.isNotBlank() && !it.equals(text, ignoreCase = true) }
+
+            if (translated == null) {
+                Log.e(TAG, "Translation returned null or same text for: $text")
+            } else {
+                Log.d(TAG, "Translated ($from→$to): $translated")
+            }
+            translated
         } catch (e: Exception) {
             Log.e(TAG, "Translation failed: ${e.message}", e)
             null

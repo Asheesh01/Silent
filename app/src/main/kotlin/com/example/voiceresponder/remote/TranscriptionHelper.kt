@@ -61,13 +61,12 @@ class TranscriptionHelper {
     fun submitJob(audioUrl: String): String? {
         Log.d(TAG, "Submitting transcription for: $audioUrl")
         return try {
-            // Both models required: universal-3-pro alone doesn't support Hindi (hi).
-            // Adding universal-2 enables 99 languages including Hindi.
-            // language_code forces the output to be in Hindi (not English auto-detect).
+            // Use auto language detection — AssemblyAI will detect Hindi or English.
+            // universal-2 supports 99 languages including Hindi.
             val jsonBody = JSONObject().apply {
                 put("audio_url", audioUrl)
-                put("language_code", "hi")
-                put("speech_model", "universal-2")   // universal-2 supports Hindi
+                put("language_detection", true)
+                put("speech_model", "universal-2")
             }.toString().toRequestBody("application/json".toMediaType())
 
             val request = Request.Builder()
@@ -100,10 +99,12 @@ class TranscriptionHelper {
         }
     }
 
-    // ── STEP 3: Poll until status = completed or error ────────────────────────
-    // Polls every 4s for up to 6 minutes (universal-3-pro can take 2-4 min).
-    // Returns transcript text, or null. lastPollError holds the failure reason.
-    fun pollResult(transcriptId: String): String? {
+    /**
+     * STEP 3: Poll until status = completed or error.
+     * Returns a Pair(transcriptText, detectedLanguageCode) e.g. Pair("नमस्ते", "hi")
+     * or null on failure. lastPollError holds the failure reason.
+     */
+    fun pollResult(transcriptId: String): Pair<String, String>? {
         val pollUrl = "https://api.assemblyai.com/v2/transcript/$transcriptId"
         Log.d(TAG, "Polling transcript $transcriptId")
         repeat(90) { attempt ->           // 90 × 4s = 360s = 6 minutes
@@ -117,7 +118,8 @@ class TranscriptionHelper {
                 val bodyStr = client.newCall(request).execute().use { it.body?.string() }
                 val json = JSONObject(bodyStr ?: return@repeat)
                 val status = json.optString("status")
-                Log.d(TAG, "Poll[$attempt] status=$status")
+                val detectedLang = json.optString("language_code", "en")
+                Log.d(TAG, "Poll[$attempt] status=$status lang=$detectedLang")
 
                 when (status) {
                     "completed" -> {
@@ -125,10 +127,10 @@ class TranscriptionHelper {
                         if (text == null) {
                             lastPollError = "Completed but transcript text is empty (audio may be silent)"
                             Log.e(TAG, lastPollError)
-                        } else {
-                            Log.d(TAG, "Transcript: $text")
+                            return null
                         }
-                        return text
+                        Log.d(TAG, "Transcript ($detectedLang): $text")
+                        return Pair(text, detectedLang)
                     }
                     "error" -> {
                         lastPollError = "AssemblyAI error: ${json.optString("error")}"

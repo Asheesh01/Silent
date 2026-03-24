@@ -123,29 +123,42 @@ class ResponderService : Service() {
                 showDebugNotification("✅ Step 2 OK: Submit", "Job ID: $transcriptId")
 
                 // ── 3c. Poll for transcription result ────────────────────────
-                // AssemblyAI returns the text in Hindi (the language spoken in the audio)
-                val hindiTranscript = transcriptionHelper.pollResult(transcriptId)
-                Log.d(TAG, "Transcript (HI): $hindiTranscript")
+                // Returns Pair(transcriptText, detectedLanguageCode)
+                val pollPair = transcriptionHelper.pollResult(transcriptId)
 
-                if (hindiTranscript.isNullOrBlank()) {
+                if (pollPair == null) {
                     showDebugNotification(
                         "❌ Step 3 FAILED: Poll",
                         transcriptionHelper.lastPollError.ifBlank { "Empty transcript returned" }
                     )
                     return@launch
                 }
-                showDebugNotification("✅ Transcription OK", hindiTranscript.take(120))
 
-                // ── 4. Translate Hindi → English ──────────────────────────────
-                val englishText = translationHelper.translateToEnglish(hindiTranscript)
-                Log.d(TAG, "Translation (EN): $englishText")
+                val (transcript, detectedLang) = pollPair
+                showDebugNotification("✅ Transcription OK ($detectedLang)", transcript.take(120))
+                Log.d(TAG, "Transcript ($detectedLang): $transcript")
+
+                // ── 4. Translate in the correct direction based on detected language ──
+                // Hindi audio → EN = translate HI→EN,  HI = original
+                // English audio → EN = original,        HI = translate EN→HI
+                val englishText: String
+                val hindiText: String
+
+                if (detectedLang == "hi") {
+                    hindiText   = transcript
+                    englishText = translationHelper.translateToEnglish(transcript) ?: transcript
+                } else {
+                    englishText = transcript
+                    hindiText   = translationHelper.translateToHindi(transcript) ?: transcript
+                }
+                Log.d(TAG, "EN: $englishText | HI: $hindiText")
 
                 // ── 5. Send follow-up SMS with transcription text ─────────────
                 smsHelper.sendAudioLink(
                     phoneNumber = phoneNumber,
                     link        = "",
-                    englishText = englishText ?: hindiTranscript,   // fallback to Hindi if translation fails
-                    hindiText   = hindiTranscript
+                    englishText = englishText,
+                    hindiText   = hindiText
                 )
                 Log.d(TAG, "Follow-up SMS with transcription sent")
 

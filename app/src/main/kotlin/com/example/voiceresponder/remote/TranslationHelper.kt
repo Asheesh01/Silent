@@ -3,14 +3,14 @@ package com.example.voiceresponder.remote
 import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.json.JSONObject
+import org.json.JSONArray
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 /**
- * Provides cloud-based translation using the MyMemory API (free, no API key needed).
- * Much better translation quality than ML Kit for colloquial Hindi ↔ English.
- * Requires internet connection.
+ * Provides cloud-based translation using Google Translate's public Neural Machine Translation (NMT).
+ * This provides the most natural, conversational Hindi ↔ English translations (e.g. understanding
+ * that "पेपर देने" means "taking an exam", not "handing over a paper").
  */
 class TranslationHelper {
 
@@ -22,38 +22,45 @@ class TranslationHelper {
         .build()
 
     /**
-     * Translates [text] from Hindi to English using MyMemory API.
-     * Returns the translated string, or null on failure.
+     * Translates [text] from Hindi to English using Google NMT.
      */
     fun translateToEnglish(text: String): String? = translate(text, from = "hi", to = "en")
 
     /**
-     * Translates [text] from English to Hindi using MyMemory API.
-     * Returns the translated string, or null on failure.
+     * Translates [text] from English to Hindi using Google NMT.
      */
     fun translateToHindi(text: String): String? = translate(text, from = "en", to = "hi")
 
     private fun translate(text: String, from: String, to: String): String? {
         return try {
             val encoded = URLEncoder.encode(text, "UTF-8")
-            val url = "https://api.mymemory.translated.net/get?q=$encoded&langpair=$from|$to"
+            // Utilizes the public Google Translate API endpoint (commonly used for free tier translation)
+            val url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=$from&tl=$to&dt=t&q=$encoded"
 
-            val request = Request.Builder().url(url).build()
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("User-Agent", "Mozilla/5.0")
+                .build()
+
             val responseStr = client.newCall(request).execute().use { it.body?.string() }
+            Log.d(TAG, "Google Translate response: $responseStr")
 
-            Log.d(TAG, "MyMemory response: $responseStr")
+            // The response is a nested JSON array. 
+            // Example: [[["Translated part 1", "Original part 1", ...], ["Translated part 2", ...]]]
+            val jsonArray = JSONArray(responseStr ?: return null)
+            val textBlocks = jsonArray.optJSONArray(0) ?: return null
 
-            val json = JSONObject(responseStr ?: return null)
-            val translated = json
-                .optJSONObject("responseData")
-                ?.optString("translatedText")
-                ?.takeIf { it.isNotBlank() && !it.equals(text, ignoreCase = true) }
-
-            if (translated == null) {
-                Log.e(TAG, "Translation returned null or same text for: $text")
-            } else {
-                Log.d(TAG, "Translated ($from→$to): $translated")
+            val translatedBuilder = java.lang.StringBuilder()
+            for (i in 0 until textBlocks.length()) {
+                val sentenceBlock = textBlocks.optJSONArray(i)
+                if (sentenceBlock != null && sentenceBlock.length() > 0) {
+                    translatedBuilder.append(sentenceBlock.optString(0))
+                }
             }
+
+            val translated = translatedBuilder.toString().trim().takeIf { it.isNotBlank() }
+            Log.d(TAG, "Translated ($from→$to): $translated")
+            
             translated
         } catch (e: Exception) {
             Log.e(TAG, "Translation failed: ${e.message}", e)

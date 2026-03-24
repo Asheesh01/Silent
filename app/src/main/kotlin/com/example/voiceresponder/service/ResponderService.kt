@@ -123,28 +123,29 @@ class ResponderService : Service() {
                 showDebugNotification("✅ Step 2 OK: Submit", "Job ID: $transcriptId")
 
                 // ── 3c. Poll for transcription result ────────────────────────
-                val englishText = transcriptionHelper.pollResult(transcriptId)
-                Log.d(TAG, "Transcript EN: $englishText")
+                // AssemblyAI returns the text in Hindi (the language spoken in the audio)
+                val hindiTranscript = transcriptionHelper.pollResult(transcriptId)
+                Log.d(TAG, "Transcript (HI): $hindiTranscript")
 
-                if (englishText.isNullOrBlank()) {
+                if (hindiTranscript.isNullOrBlank()) {
                     showDebugNotification(
                         "❌ Step 3 FAILED: Poll",
                         transcriptionHelper.lastPollError.ifBlank { "Empty transcript returned" }
                     )
                     return@launch
                 }
-                showDebugNotification("✅ Transcription OK", englishText.take(120))
+                showDebugNotification("✅ Transcription OK", hindiTranscript.take(120))
 
-                // ── 4. Translate English → Hindi ──────────────────────────────
-                val hindiText = translationHelper.translateToHindi(englishText)
-                Log.d(TAG, "Translation HI: $hindiText")
+                // ── 4. Translate Hindi → English ──────────────────────────────
+                val englishText = translationHelper.translateToEnglish(hindiTranscript)
+                Log.d(TAG, "Translation (EN): $englishText")
 
                 // ── 5. Send follow-up SMS with transcription text ─────────────
                 smsHelper.sendAudioLink(
                     phoneNumber = phoneNumber,
                     link        = "",
-                    englishText = englishText,
-                    hindiText   = hindiText
+                    englishText = englishText ?: hindiTranscript,   // fallback to Hindi if translation fails
+                    hindiText   = hindiTranscript
                 )
                 Log.d(TAG, "Follow-up SMS with transcription sent")
 

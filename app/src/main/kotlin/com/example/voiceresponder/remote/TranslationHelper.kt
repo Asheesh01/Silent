@@ -8,12 +8,23 @@ import kotlinx.coroutines.tasks.await
 
 /**
  * Provides on-device translation using ML Kit.
- * Translates a source text from English into the specified target language.
+ * Supports Hindi ↔ English translation.
  * Language models are downloaded on first use (requires internet for the first time).
  */
 class TranslationHelper {
 
     private val TAG = "TranslationHelper"
+
+    /**
+     * Translates [text] from Hindi to English.
+     * Use this when AssemblyAI returns a Hindi transcript that needs to be shown in English.
+     * Must be called from a coroutine (suspend function).
+     */
+    suspend fun translateToEnglish(text: String): String? = translate(
+        text = text,
+        sourceLang = TranslateLanguage.HINDI,
+        targetLang = TranslateLanguage.ENGLISH
+    )
 
     /**
      * Translates [text] from English to Hindi.

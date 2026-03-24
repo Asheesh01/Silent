@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
  * Steps are exposed publicly so callers can show per-step debug notifications.
  */
 class TranscriptionHelper {
-
+    private val TAG = "TranscriptionHelper"
     // API Key is loaded from local Keys.kt (which is ignored by Git to keep it off GitHub)
     private val API_KEY = Keys.ASSEMBLY_AI
     private val client = OkHttpClient.Builder()
@@ -63,11 +63,11 @@ class TranscriptionHelper {
         return try {
             // Both models required: universal-3-pro alone doesn't support Hindi (hi).
             // Adding universal-2 enables 99 languages including Hindi.
+            // language_code forces the output to be in Hindi (not English auto-detect).
             val jsonBody = JSONObject().apply {
                 put("audio_url", audioUrl)
-                put("speech_models", org.json.JSONArray()
-                    .put("universal-3-pro")
-                    .put("universal-2"))
+                put("language_code", "hi")
+                put("speech_model", "universal-2")   // universal-2 supports Hindi
             }.toString().toRequestBody("application/json".toMediaType())
 
             val request = Request.Builder()

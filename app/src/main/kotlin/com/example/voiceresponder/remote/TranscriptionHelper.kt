@@ -66,7 +66,7 @@ class TranscriptionHelper {
             val jsonBody = JSONObject().apply {
                 put("audio_url", audioUrl)
                 put("language_detection", true)
-                put("speech_model", "universal-2")
+                put("speech_models", org.json.JSONArray().put("universal-2"))
             }.toString().toRequestBody("application/json".toMediaType())
 
             val request = Request.Builder()

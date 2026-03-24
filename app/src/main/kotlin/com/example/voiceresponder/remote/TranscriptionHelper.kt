@@ -16,10 +16,8 @@ import java.util.concurrent.TimeUnit
  */
 class TranscriptionHelper {
 
-    private val TAG     = "TranscriptionHelper"
-    // TODO: Replace with your real AssemblyAI API key from https://www.assemblyai.com/dashboard
-    private val API_KEY = "bd148c48a8a14442b077342e327953a7" // ← REPLACE THIS
-
+    // API Key is loaded from local Keys.kt (which is ignored by Git to keep it off GitHub)
+    private val API_KEY = Keys.ASSEMBLY_AI
     private val client = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
         .readTimeout(120, TimeUnit.SECONDS)

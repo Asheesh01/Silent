@@ -17,9 +17,9 @@ import java.security.MessageDigest
 class CloudinaryHelper {
 
     private val TAG         = "CloudinaryHelper"
-    private val CLOUD_NAME  = "duiqjdicz"
-    private val API_KEY     = "435849175891229"
-    private val API_SECRET  = "IhKcfQwNycVr9JDDzu7sXLciULM"
+    private val CLOUD_NAME  = Keys.CLOUDINARY_CLOUD_NAME
+    private val API_KEY     = Keys.CLOUDINARY_API_KEY
+    private val API_SECRET  = Keys.CLOUDINARY_API_SECRET
 
     private val client = OkHttpClient()
     private val uploadUrl = "https://api.cloudinary.com/v1_1/$CLOUD_NAME/video/upload"

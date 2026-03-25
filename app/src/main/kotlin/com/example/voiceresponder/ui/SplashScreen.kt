@@ -166,6 +166,49 @@ fun SplashScreen(navController: NavController) {
         label = "dotTwinkle"
     )
 
+    // ── Continuous: ripple wave expanding from logo ───────────────────────────
+    val ripple1 by infiniteTransition.animateFloat(
+        initialValue  = 0f,
+        targetValue   = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(1800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ripple1"
+    )
+    val ripple2 by infiniteTransition.animateFloat(
+        initialValue  = 0f,
+        targetValue   = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(1800, delayMillis = 600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ripple2"
+    )
+    val ripple3 by infiniteTransition.animateFloat(
+        initialValue  = 0f,
+        targetValue   = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(1800, delayMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ripple3"
+    )
+
+    // ── Continuous: logo circle hue shift ────────────────────────────────────
+    val hueShift by infiniteTransition.animateFloat(
+        initialValue  = 0f,
+        targetValue   = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "hueShift"
+    )
+    // Interpolate between teal and purple
+    val logoColor1 = androidx.compose.ui.graphics.lerp(Color(0xFF80DEEA), Color(0xFFB39DDB), hueShift)
+    val logoColor2 = androidx.compose.ui.graphics.lerp(Color(0xFF00BCD4), Color(0xFF7C4DFF), hueShift)
+
     // ── Navigation sequence ───────────────────────────────────────────────────
     LaunchedEffect(Unit) {
         logoVisible  = true
@@ -245,6 +288,19 @@ fun SplashScreen(navController: NavController) {
                     }
                 }
 
+                // Ripple waves
+                listOf(ripple1, ripple2, ripple3).forEach { progress ->
+                    val rippleSize    = (96.dp + (120.dp * progress))
+                    val rippleAlpha  = (1f - progress) * 0.45f
+                    Box(
+                        modifier = Modifier
+                            .size(rippleSize)
+                            .clip(CircleShape)
+                            .alpha(rippleAlpha)
+                            .background(Color(0xFF00E5FF).copy(alpha = rippleAlpha))
+                    )
+                }
+
                 // Outer ambient glow
                 Box(
                     modifier = Modifier
@@ -301,7 +357,7 @@ fun SplashScreen(navController: NavController) {
                     }
                 }
 
-                // Main icon circle (gradient background)
+                // Main icon circle (animated gradient background)
                 Box(
                     modifier = Modifier
                         .size(96.dp)
@@ -309,8 +365,8 @@ fun SplashScreen(navController: NavController) {
                         .background(
                             Brush.radialGradient(
                                 listOf(
-                                    Color(0xFF80DEEA),
-                                    Color(0xFF00BCD4),
+                                    logoColor1,
+                                    logoColor2,
                                     Color(0xFF006064),
                                 )
                             )

@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -21,6 +22,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,7 +41,7 @@ import kotlinx.coroutines.withContext
 data class DeviceContact(val name: String, val phone: String)
 
 fun loadDeviceContacts(contentResolver: ContentResolver): List<DeviceContact> {
-    val seen     = mutableSetOf<String>()   // normalized numbers already added
+    val seen     = mutableSetOf<String>()
     val contacts = mutableListOf<DeviceContact>()
 
     val cursor = contentResolver.query(
@@ -58,7 +60,6 @@ fun loadDeviceContacts(contentResolver: ContentResolver): List<DeviceContact> {
         while (it.moveToNext()) {
             val name  = it.getString(nameIdx)  ?: continue
             val phone = it.getString(phoneIdx) ?: continue
-            // Normalize to last 10 digits for deduplication
             val normalized = normalizePhone(phone)
             if (normalized.isNotBlank() && seen.add(normalized)) {
                 contacts.add(DeviceContact(name, phone))
@@ -67,7 +68,6 @@ fun loadDeviceContacts(contentResolver: ContentResolver): List<DeviceContact> {
     }
     return contacts
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +84,7 @@ fun ContactListScreen(navController: NavController) {
     var deviceContacts  by remember { mutableStateOf(listOf<DeviceContact>()) }
     var selectedNumbers by remember { mutableStateOf(setOf<String>()) }
     var isLoading       by remember { mutableStateOf(true) }
+    var searchQuery     by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -96,6 +97,20 @@ fun ContactListScreen(navController: NavController) {
                 selectedNumbers = saved
                 isLoading       = false
             }
+        }
+    }
+
+    // Build a map: normalizedPhone -> name, for resolving names of selected contacts
+    val phoneToName: Map<String, String> = remember(deviceContacts) {
+        deviceContacts.associate { normalizePhone(it.phone) to it.name }
+    }
+
+    // Filter contacts by search query
+    val filteredContacts = remember(deviceContacts, searchQuery) {
+        if (searchQuery.isBlank()) deviceContacts
+        else deviceContacts.filter {
+            it.name.contains(searchQuery, ignoreCase = true) ||
+            it.phone.contains(searchQuery)
         }
     }
 
@@ -122,31 +137,6 @@ fun ContactListScreen(navController: NavController) {
                     containerColor = DarkCard
                 )
             )
-        },
-        floatingActionButton = {
-            if (selectedNumbers.isNotEmpty()) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        scope.launch {
-                            snackbarHostState.showSnackbar(
-                                "${selectedNumbers.size} contact${if (selectedNumbers.size == 1) "" else "s"} saved ✓"
-                            )
-                        }
-                    },
-                    icon = {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White)
-                    },
-                    text = {
-                        Text(
-                            "${selectedNumbers.size} Selected",
-                            color      = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    containerColor = Teal400,
-                    contentColor   = Color.White
-                )
-            }
         }
     ) { padding ->
         Box(
@@ -160,25 +150,96 @@ fun ContactListScreen(navController: NavController) {
                     .padding(padding)
             ) {
 
+                // ── Search bar ────────────────────────────────────────────────
+                OutlinedTextField(
+                    value         = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder   = { Text("Search contacts…", color = SubText) },
+                    leadingIcon   = { Icon(Icons.Default.Search, contentDescription = null, tint = Teal400) },
+                    trailingIcon  = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = SubText)
+                            }
+                        }
+                    },
+                    singleLine      = true,
+                    shape           = RoundedCornerShape(14.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    colors          = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor   = Teal400,
+                        unfocusedBorderColor = Color(0xFF2A2A3E),
+                        focusedTextColor     = OnDarkText,
+                        unfocusedTextColor   = OnDarkText,
+                        cursorColor          = Teal400,
+                        focusedContainerColor   = DarkCard,
+                        unfocusedContainerColor = DarkCard
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                )
 
+                // ── Selected contacts section ─────────────────────────────────
                 if (selectedNumbers.isNotEmpty()) {
-                    Surface(
-                        color = Teal400.copy(alpha = 0.12f),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        Text(
-                            "${selectedNumbers.size} contact${if (selectedNumbers.size == 1) "" else "s"} will receive your voice response",
-                            color    = Teal400,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(10.dp)
-                        )
+                    Text(
+                        "Selected (${selectedNumbers.size})",
+                        color      = Teal400,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize   = 13.sp,
+                        modifier   = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+
+                    selectedNumbers.forEach { normalized ->
+                        val name  = phoneToName[normalized] ?: normalized
+                        val phone = deviceContacts.firstOrNull {
+                            normalizePhone(it.phone) == normalized
+                        }?.phone ?: normalized
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Teal400.copy(alpha = 0.07f))
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Avatar
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Teal400.copy(alpha = 0.20f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                    color      = Teal400,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize   = 16.sp
+                                )
+                            }
+
+                            Spacer(Modifier.width(12.dp))
+
+                            Column(Modifier.weight(1f)) {
+                                Text(name,  color = OnDarkText, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                                Text(phone, color = SubText,    fontSize   = 12.sp)
+                            }
+                        }
+                        HorizontalDivider(color = Color(0xFF1E1E2E), thickness = 0.5.dp)
                     }
-                    Spacer(Modifier.height(8.dp))
+
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "All Contacts",
+                        color      = SubText,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize   = 13.sp,
+                        modifier   = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
                 }
 
+                // ── All / filtered contacts list ──────────────────────────────
                 when {
                     isLoading -> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -194,9 +255,18 @@ fun ContactListScreen(navController: NavController) {
                             )
                         }
                     }
+                    filteredContacts.isEmpty() -> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                "No contacts match \"$searchQuery\"",
+                                color     = SubText,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                     else -> {
                         LazyColumn {
-                            items(deviceContacts) { contact ->
+                            items(filteredContacts) { contact ->
                                 val normalized = normalizePhone(contact.phone)
                                 val isSelected = selectedNumbers.contains(normalized)
                                 ContactRow(
@@ -214,14 +284,13 @@ fun ContactListScreen(navController: NavController) {
                                                 updatedSet = selectedNumbers + normalized
                                             }
                                             selectedNumbers = updatedSet
-                                            // Push updated list to Firestore for cross-device sync
                                             uid?.let { syncHelper.pushContactsToCloud(it, updatedSet) }
                                         }
                                     }
                                 )
                                 HorizontalDivider(color = Color(0xFF1E1E2E), thickness = 0.5.dp)
                             }
-                            item { Spacer(Modifier.height(88.dp)) } // FAB clearance
+                            item { Spacer(Modifier.height(40.dp)) }
                         }
                     }
                 }
@@ -242,7 +311,6 @@ fun ContactRow(name: String, phone: String, isSelected: Boolean, onClick: () -> 
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Avatar circle
         Box(
             modifier = Modifier
                 .size(44.dp)

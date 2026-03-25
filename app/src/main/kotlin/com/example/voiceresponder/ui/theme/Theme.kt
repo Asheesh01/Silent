@@ -8,11 +8,11 @@ import androidx.compose.ui.graphics.Color
 // ── Silent Mode colour palette ──────────────────────────────────────────────
 val Teal400      = Color(0xFF00BCD4)
 val Teal600      = Color(0xFF00838F)
-val DarkBg       = Color(0xFF0D0D0D)
-val DarkSurface  = Color(0xFF1A1A2E)
-val DarkCard     = Color(0xFF16213E)
+val DarkBg       = Color(0xFF0F172A)
+val DarkSurface  = Color(0xFF1E293B)
+val DarkCard     = Color(0xFF1E2D45)
 val OnDarkText   = Color(0xFFECEFF1)
-val SubText      = Color(0xFF90A4AE)
+val SubText      = Color(0xFF94A3B8)
 val ErrorRed     = Color(0xFFCF6679)
 val SelectedGreen = Color(0xFF00E676)
 

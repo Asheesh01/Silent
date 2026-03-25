@@ -192,7 +192,7 @@ fun LoginScreen(navController: NavController) {
                                                     }
                                                 } else {
                                                     isLoading = false
-                                                    Toast.makeText(context, "Sign In Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                                                    Toast.makeText(context, "Wrong email or password.", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                     }

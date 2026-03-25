@@ -36,6 +36,7 @@ class TranscriptionHelper {
                 .post(body)
                 .build()
 
+
             client.newCall(request).execute().use { response ->
                 val bodyStr = response.body?.string()
                 Log.d(TAG, "Upload HTTP ${response.code}: $bodyStr")

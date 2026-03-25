@@ -1,8 +1,14 @@
 package com.example.voiceresponder.ui
 
+import android.Manifest
+import android.content.ContentResolver
 import android.content.Intent
 import android.media.MediaPlayer
+import android.os.Build
+import android.provider.ContactsContract
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,7 +31,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.room.Room
 import com.example.voiceresponder.data.AppDatabase
+import com.example.voiceresponder.data.ContactEntity
+import com.example.voiceresponder.data.normalizePhone
 import com.example.voiceresponder.remote.FirebaseHelper
+import com.example.voiceresponder.remote.SyncHelper
 import com.example.voiceresponder.service.ResponderService
 import com.example.voiceresponder.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
@@ -47,8 +56,9 @@ fun DashboardScreen(navController: NavController) {
     val contactDao = database.contactDao()
 
     var isActive         by remember { mutableStateOf(false) }
-    var selectedContacts by remember { mutableStateOf(listOf<String>()) }
+    var selectedContacts by remember { mutableStateOf(setOf<String>()) }
     var selectedTab      by remember { mutableIntStateOf(0) }
+    var deviceContacts   by remember { mutableStateOf(listOf<DeviceContact>()) }
 
     // Audio state
     val audioFile   = remember { File(context.filesDir, "default_response.mp4") }
@@ -61,12 +71,32 @@ fun DashboardScreen(navController: NavController) {
         onDispose { mediaPlayer?.release() }
     }
 
+    // ── Request permissions once, after the user has logged in ───────────
+    val permLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { }
+
     LaunchedEffect(Unit) {
+        val perms = mutableListOf(
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.READ_CONTACTS
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            perms.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        permLauncher.launch(perms.toTypedArray())
+
         withContext(Dispatchers.IO) {
-            selectedContacts = contactDao.getAllContacts().map { it.phoneNumber }
+            val contacts = loadDeviceContacts(context.contentResolver)
+            val saved    = contactDao.getAllContacts().map { it.phoneNumber }.toSet()
             // Load responder state from Firestore so it syncs across devices
             val savedActive = uid?.let { fbHelper.loadResponderState(it) } ?: false
             withContext(Dispatchers.Main) {
+                deviceContacts  = contacts
+                selectedContacts = saved
                 isActive = savedActive
                 if (savedActive) {
                     val intent = Intent(context, ResponderService::class.java).apply {
@@ -232,27 +262,60 @@ fun DashboardScreen(navController: NavController) {
                         }
                     }
                 } else {
-                    items(selectedContacts) { phone ->
+                    val phoneToName = deviceContacts.associate { normalizePhone(it.phone) to it.name }
+                    items(selectedContacts.toList()) { normalized ->
+                        val name    = phoneToName[normalized] ?: normalized
+                        val display = deviceContacts.firstOrNull { normalizePhone(it.phone) == normalized }?.phone ?: normalized
                         Card(
                             shape  = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = DarkCard),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2E42)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
-                                modifier          = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier             = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment    = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(Teal400.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Phone, contentDescription = null, tint = Teal400, modifier = Modifier.size(18.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(Teal400.copy(alpha = 0.20f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                            color = Teal400, fontWeight = FontWeight.Bold, fontSize = 16.sp
+                                        )
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Column {
+                                        Text(name,    color = OnDarkText, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                                        Text(display, color = SubText,    fontSize = 12.sp)
+                                    }
                                 }
-                                Spacer(Modifier.width(12.dp))
-                                Text(phone, color = OnDarkText, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                // Delete button
+                                val syncHelper = remember { SyncHelper() }
+                                IconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            withContext(Dispatchers.IO) { contactDao.removeContact(ContactEntity(normalized)) }
+                                            val updated = selectedContacts - normalized
+                                            selectedContacts = updated
+                                            uid?.let { syncHelper.pushContactsToCloud(it, updated) }
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Remove",
+                                        tint     = Color(0xFFEF5350),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -332,10 +395,13 @@ fun DashboardScreen(navController: NavController) {
                                             contentDescription = null, tint = Teal400, modifier = Modifier.size(28.dp)
                                         )
                                     }
-                                    // Delete
-                                    IconButton(onClick = { showDelDlg = true }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = ErrorRed, modifier = Modifier.size(24.dp))
-                                    }
+                                     // Delete
+                                     IconButton(
+                                         onClick  = { showDelDlg = true },
+                                         modifier = Modifier.size(48.dp)
+                                     ) {
+                                         Icon(Icons.Default.Delete, contentDescription = "Delete", tint = ErrorRed, modifier = Modifier.size(32.dp))
+                                     }
                                 }
                             }
                         }

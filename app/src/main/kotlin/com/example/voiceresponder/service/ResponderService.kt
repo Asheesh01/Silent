@@ -103,39 +103,27 @@ class ResponderService : Service() {
                 // ── 3a. Upload audio to AssemblyAI ───────────────────────────
                 val assemblyUrl = transcriptionHelper.uploadAudio(voiceFile)
                 if (assemblyUrl == null) {
-                    showDebugNotification(
-                        "❌ Step 1 FAILED: Upload",
-                        "Could not upload audio to AssemblyAI. API key may be invalid (HTTP 401) or network error. Key: bd148c..."
-                    )
+                    Log.e(TAG, "Step 1 FAILED: Could not upload audio to AssemblyAI")
                     return@launch
                 }
-                showDebugNotification("✅ Step 1 OK: Upload", assemblyUrl.take(80))
 
                 // ── 3b. Submit transcription job ─────────────────────────────
                 val transcriptId = transcriptionHelper.submitJob(assemblyUrl)
                 if (transcriptId == null) {
-                    showDebugNotification(
-                        "❌ Step 2 FAILED: Submit",
-                        transcriptionHelper.lastSubmitError.ifBlank { "Unknown error — check Logcat tag=TranscriptionHelper" }
-                    )
+                    Log.e(TAG, "Step 2 FAILED: ${transcriptionHelper.lastSubmitError}")
                     return@launch
                 }
-                showDebugNotification("✅ Step 2 OK: Submit", "Job ID: $transcriptId")
 
                 // ── 3c. Poll for transcription result ────────────────────────
                 // Returns Pair(transcriptText, detectedLanguageCode)
                 val pollPair = transcriptionHelper.pollResult(transcriptId)
 
                 if (pollPair == null) {
-                    showDebugNotification(
-                        "❌ Step 3 FAILED: Poll",
-                        transcriptionHelper.lastPollError.ifBlank { "Empty transcript returned" }
-                    )
+                    Log.e(TAG, "Step 3 FAILED: ${transcriptionHelper.lastPollError}")
                     return@launch
                 }
 
                 val (transcript, detectedLang) = pollPair
-                showDebugNotification("✅ Transcription OK ($detectedLang)", transcript.take(120))
                 Log.d(TAG, "Transcript ($detectedLang): $transcript")
 
                 // ── 4. Translate in the correct direction based on detected language ──
@@ -180,27 +168,9 @@ class ResponderService : Service() {
             )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
 
-            // Debug channel for transcription status
-            val debugChannel = NotificationChannel(
-                "TranscriptionDebug", "Transcription Debug", NotificationManager.IMPORTANCE_HIGH
-            )
-            getSystemService(NotificationManager::class.java).createNotificationChannel(debugChannel)
         }
     }
 
-    /** Shows a notification on the device — no Logcat needed to diagnose failures. */
-    private fun showDebugNotification(title: String, message: String) {
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notification = NotificationCompat.Builder(this, "TranscriptionDebug")
-            .setContentTitle(title)
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
-        nm.notify(99, notification)
-    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 }

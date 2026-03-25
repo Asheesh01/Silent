@@ -37,6 +37,8 @@ fun SignUpScreen(navController: NavController) {
     var showPwd      by remember { mutableStateOf(false) }
     var showConfPwd  by remember { mutableStateOf(false) }
 
+    val passwordMismatch = confirmPwd.isNotEmpty() && password != confirmPwd
+
     val context = LocalContext.current
     val auth    = remember { FirebaseAuth.getInstance() }
 
@@ -136,7 +138,7 @@ fun SignUpScreen(navController: NavController) {
                         value         = confirmPwd,
                         onValueChange = { confirmPwd = it },
                         placeholder   = { Text("Confirm Password", color = SubText) },
-                        leadingIcon   = { Icon(Icons.Default.Lock, contentDescription = null, tint = Teal400) },
+                        leadingIcon   = { Icon(Icons.Default.Lock, contentDescription = null, tint = if (passwordMismatch) Color(0xFFEF5350) else Teal400) },
                         trailingIcon  = {
                             IconButton(onClick = { showConfPwd = !showConfPwd }) {
                                 Icon(if (showConfPwd) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null, tint = SubText)
@@ -146,15 +148,27 @@ fun SignUpScreen(navController: NavController) {
                         singleLine    = true,
                         shape         = RoundedCornerShape(12.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        isError       = passwordMismatch,
                         colors        = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor   = Teal400,
-                            unfocusedBorderColor = Color(0xFF2A2A3E),
+                            focusedBorderColor   = if (passwordMismatch) Color(0xFFEF5350) else Teal400,
+                            unfocusedBorderColor = if (passwordMismatch) Color(0xFFEF5350) else Color(0xFF2A2A3E),
                             focusedTextColor     = OnDarkText,
                             unfocusedTextColor   = OnDarkText,
                             cursorColor          = Teal400
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    if (passwordMismatch) {
+                        Text(
+                            text     = "Passwords do not match",
+                            color    = Color(0xFFEF5350),
+                            fontSize = 12.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 4.dp, top = 4.dp)
+                        )
+                    }
 
                     Spacer(Modifier.height(22.dp))
 

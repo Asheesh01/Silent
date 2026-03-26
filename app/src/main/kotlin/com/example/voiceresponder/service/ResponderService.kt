@@ -52,7 +52,9 @@ class ResponderService : Service() {
     }
 
     private fun processMissedCall(phoneNumber: String) {
-        val database            = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "responder-db").build()
+        val database            = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "responder-db")
+            .fallbackToDestructiveMigration()
+            .build()
         val contactDao          = database.contactDao()
         val cloudinaryHelper    = CloudinaryHelper()
         val firebaseHelper      = FirebaseHelper()
@@ -150,8 +152,11 @@ class ResponderService : Service() {
                 )
                 Log.d(TAG, "Follow-up SMS with transcription sent")
 
-                val isAppUser = firebaseHelper.checkUserExists(phoneNumber)
-                Log.d(TAG, "Is app user: $isAppUser")
+                // NOTE: We no longer query other users' Firestore documents by phone
+                // number — Firestore security rules (per-UID) block cross-user reads
+                // intentionally to protect user privacy. SMS is the secure delivery
+                // path for callers whose UID we don't know.
+                Log.d(TAG, "SMS delivery complete for $phoneNumber")
 
             } catch (e: Exception) {
                 Log.e(TAG, "processMissedCall error", e)

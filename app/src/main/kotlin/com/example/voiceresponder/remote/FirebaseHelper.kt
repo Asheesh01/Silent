@@ -22,24 +22,35 @@ class FirebaseHelper {
     private val firestore = FirebaseFirestore.getInstance()
     private val httpClient = OkHttpClient()
 
-    // ── User lookup ───────────────────────────────────────────────────────────
+    // ── User lookup (UID-scoped — compatible with Firestore per-UID rules) ──────
 
-    suspend fun checkUserExists(phoneNumber: String): Boolean {
-        val result = firestore.collection("users")
-            .whereEqualTo("phoneNumber", phoneNumber)
-            .get()
-            .await()
-        return !result.isEmpty
+    /**
+     * Check if a user document exists for the given UID.
+     * Only reads the caller's own document — safe under per-UID Firestore rules.
+     */
+    suspend fun checkUserExistsByUid(uid: String): Boolean {
+        return try {
+            val doc = firestore.collection("users").document(uid).get().await()
+            doc.exists()
+        } catch (e: Exception) {
+            Log.e(TAG, "checkUserExistsByUid failed for uid=$uid", e)
+            false
+        }
     }
 
-    suspend fun getFCMToken(phoneNumber: String): String? {
-        val result = firestore.collection("users")
-            .whereEqualTo("phoneNumber", phoneNumber)
-            .get()
-            .await()
-        return if (!result.isEmpty) {
-            result.documents[0].getString("fcmToken")
-        } else {
+    /**
+     * Fetch the FCM token for the given UID.
+     * Only reads the user's own document — safe under per-UID Firestore rules.
+     * The caller must already know the recipient's UID (e.g. stored locally or
+     * shared out-of-band) — cross-user phone lookups are intentionally blocked
+     * by security rules to protect user privacy.
+     */
+    suspend fun getFCMTokenByUid(uid: String): String? {
+        return try {
+            firestore.collection("users").document(uid).get().await()
+                .getString("fcmToken")
+        } catch (e: Exception) {
+            Log.e(TAG, "getFCMTokenByUid failed for uid=$uid", e)
             null
         }
     }

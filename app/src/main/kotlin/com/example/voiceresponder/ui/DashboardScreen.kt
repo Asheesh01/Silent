@@ -25,9 +25,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import androidx.room.Room
 import com.example.voiceresponder.data.AppDatabase
@@ -108,20 +111,33 @@ fun DashboardScreen(navController: NavController) {
         scope.launch { loadData() }
     }
 
-    LaunchedEffect(Unit) {
-        val perms = mutableListOf(
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_CALL_LOG,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.SEND_SMS,
-            Manifest.permission.READ_CONTACTS
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            perms.add(Manifest.permission.POST_NOTIFICATIONS)
+    // ── Lifecycle-aware permission request ────────────────────────────────
+    // Wait until the Activity reaches ON_RESUME before firing the permission
+    // dialog. This guarantees the app is fully in the foreground, which:
+    //  1. Prevents ForegroundServiceStartNotAllowedException on Android 12+
+    //  2. Fixes the post-installation close (installer handoff completes first)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var permissionsRequested by remember { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && !permissionsRequested) {
+                permissionsRequested = true
+                val perms = mutableListOf(
+                    Manifest.permission.READ_PHONE_STATE,
+                    Manifest.permission.READ_CALL_LOG,
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.SEND_SMS,
+                    Manifest.permission.READ_CONTACTS
+                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    perms.add(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                permLauncher.launch(perms.toTypedArray())
+            }
         }
-        permLauncher.launch(perms.toTypedArray())
-        // NOTE: Do NOT load data or start services here while the permission
-        // dialog is open – Android 12+ will throw ForegroundServiceStartNotAllowedException.
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     // ── Delete recording dialog ────────────────────────────────────────────

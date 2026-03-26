@@ -51,7 +51,9 @@ fun DashboardScreen(navController: NavController) {
     val uid        = remember { FirebaseAuth.getInstance().currentUser?.uid }
 
     val database = remember {
-        Room.databaseBuilder(context, AppDatabase::class.java, "responder-db").build()
+        Room.databaseBuilder(context, AppDatabase::class.java, "responder-db")
+            .fallbackToDestructiveMigration()
+            .build()
     }
     val contactDao = database.contactDao()
 
@@ -72,9 +74,39 @@ fun DashboardScreen(navController: NavController) {
     }
 
     // ── Request permissions once, after the user has logged in ───────────
+    // Data-load lambda extracted so it can be called after permissions are granted
+    val loadData: suspend () -> Unit = {
+        withContext(Dispatchers.IO) {
+            val contacts = loadDeviceContacts(context.contentResolver)
+            val saved    = contactDao.getAllContacts().map { it.phoneNumber }.toSet()
+            // Load responder state from Firestore so it syncs across devices
+            val savedActive = uid?.let { fbHelper.loadResponderState(it) } ?: false
+            withContext(Dispatchers.Main) {
+                deviceContacts   = contacts
+                selectedContacts = saved
+                isActive         = savedActive
+                // Only start the service once permissions have been granted and
+                // the app is back in the foreground (i.e. inside the callback,
+                // not while the system dialog is still open). This prevents the
+                // ForegroundServiceStartNotAllowedException on Android 12+.
+                if (savedActive) {
+                    val intent = Intent(context, ResponderService::class.java).apply {
+                        action = "ACTION_START_MONITORING"
+                    }
+                    context.startForegroundService(intent)
+                }
+            }
+        }
+    }
+
     val permLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { }
+    ) {
+        // Called after the user responds to every permission dialog.
+        // The app is fully in the foreground again here, so it is safe
+        // to start foreground services and load data.
+        scope.launch { loadData() }
+    }
 
     LaunchedEffect(Unit) {
         val perms = mutableListOf(
@@ -88,24 +120,8 @@ fun DashboardScreen(navController: NavController) {
             perms.add(Manifest.permission.POST_NOTIFICATIONS)
         }
         permLauncher.launch(perms.toTypedArray())
-
-        withContext(Dispatchers.IO) {
-            val contacts = loadDeviceContacts(context.contentResolver)
-            val saved    = contactDao.getAllContacts().map { it.phoneNumber }.toSet()
-            // Load responder state from Firestore so it syncs across devices
-            val savedActive = uid?.let { fbHelper.loadResponderState(it) } ?: false
-            withContext(Dispatchers.Main) {
-                deviceContacts  = contacts
-                selectedContacts = saved
-                isActive = savedActive
-                if (savedActive) {
-                    val intent = Intent(context, ResponderService::class.java).apply {
-                        action = "ACTION_START_MONITORING"
-                    }
-                    context.startForegroundService(intent)
-                }
-            }
-        }
+        // NOTE: Do NOT load data or start services here while the permission
+        // dialog is open – Android 12+ will throw ForegroundServiceStartNotAllowedException.
     }
 
     // ── Delete recording dialog ────────────────────────────────────────────

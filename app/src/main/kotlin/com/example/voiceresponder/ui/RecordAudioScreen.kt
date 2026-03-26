@@ -165,11 +165,11 @@ fun RecordAudioScreen(navController: NavController) {
                                 Toast.makeText(context, "Recording saved!", Toast.LENGTH_SHORT).show()
                                 // Upload to Cloudinary + save URL to Firestore for cross-device restore
                                 scope.launch {
-                                    val url = withContext(Dispatchers.IO) {
+                                    val result = withContext(Dispatchers.IO) {
                                         cloudHelper.uploadAudio(audioFile)
                                     }
-                                    if (url != null && uid != null) {
-                                        withContext(Dispatchers.IO) { fbHelper.saveAudioUrl(uid, url) }
+                                    if (result != null && uid != null) {
+                                        withContext(Dispatchers.IO) { fbHelper.saveAudioUrl(uid, result.url) }
                                     }
                                 }
                             } else {

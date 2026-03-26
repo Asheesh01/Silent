@@ -10,6 +10,7 @@ import androidx.core.app.NotificationCompat
 import androidx.room.Room
 import com.example.voiceresponder.data.AppDatabase
 import com.example.voiceresponder.remote.CloudinaryHelper
+import com.example.voiceresponder.remote.DeleteAudioWorker
 import com.example.voiceresponder.remote.FirebaseHelper
 import com.example.voiceresponder.remote.SmsHelper
 import com.example.voiceresponder.remote.TranscriptionHelper
@@ -85,8 +86,8 @@ class ResponderService : Service() {
                 }
 
                 // ── 1. Upload to Cloudinary ───────────────────────────────────
-                val downloadUrl = cloudinaryHelper.uploadAudio(voiceFile)
-                if (downloadUrl == null) {
+                val uploadResult = cloudinaryHelper.uploadAudio(voiceFile)
+                if (uploadResult == null) {
                     Log.w(TAG, "Cloudinary upload failed — sending text-only fallback")
                     smsHelper.sendAudioLink(
                         phoneNumber = phoneNumber,
@@ -96,7 +97,12 @@ class ResponderService : Service() {
                     )
                     return@launch
                 }
+                val downloadUrl = uploadResult.url
                 Log.d(TAG, "Audio URL: $downloadUrl")
+
+                // ── Schedule 24-hour auto-delete ──────────────────────────────
+                DeleteAudioWorker.schedule(applicationContext, uploadResult.publicId)
+                Log.d(TAG, "Auto-delete scheduled in 24h for publicId=${uploadResult.publicId}")
 
                 // ── 2. Send immediate SMS with audio link (caller doesn't wait) ──
                 smsHelper.sendAudioLink(phoneNumber = phoneNumber, link = downloadUrl)

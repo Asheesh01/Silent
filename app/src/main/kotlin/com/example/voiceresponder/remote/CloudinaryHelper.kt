@@ -13,8 +13,11 @@ import java.security.MessageDigest
 
 /**
  * Uploads audio files to Cloudinary using signed uploads.
- * Returns a public HTTPS URL to the uploaded file, or null on failure.
+ * Returns an [UploadResult] with the public HTTPS URL and public_id,
+ * or null on failure.
  */
+data class UploadResult(val url: String, val publicId: String)
+
 class CloudinaryHelper {
 
     private val TAG         = "CloudinaryHelper"
@@ -26,10 +29,11 @@ class CloudinaryHelper {
     private val uploadUrl = "https://api.cloudinary.com/v1_1/$CLOUD_NAME/video/upload"
 
     /**
-     * Uploads [audioFile] to Cloudinary and returns its public download URL.
+     * Uploads [audioFile] to Cloudinary and returns an [UploadResult] containing
+     * the public HTTPS URL and the public_id needed for later deletion.
      * Blocking — call from Dispatchers.IO coroutine.
      */
-    fun uploadAudio(audioFile: File): String? {
+    fun uploadAudio(audioFile: File): UploadResult? {
         return try {
             val timestamp = (System.currentTimeMillis() / 1000).toString()
             val signature = sign("timestamp=$timestamp")
@@ -56,10 +60,11 @@ class CloudinaryHelper {
                     Log.e(TAG, "Upload failed ${response.code}: $body")
                     return null
                 }
-                val json = JSONObject(body ?: return null)
-                val url = json.optString("secure_url").takeIf { it.isNotEmpty() }
-                Log.d(TAG, "Uploaded to Cloudinary: $url")
-                url
+                val json     = JSONObject(body ?: return null)
+                val url      = json.optString("secure_url").takeIf { it.isNotEmpty() } ?: return null
+                val publicId = json.optString("public_id").takeIf { it.isNotEmpty() } ?: return null
+                Log.d(TAG, "Uploaded to Cloudinary: $url (publicId=$publicId)")
+                UploadResult(url = url, publicId = publicId)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Cloudinary upload error", e)

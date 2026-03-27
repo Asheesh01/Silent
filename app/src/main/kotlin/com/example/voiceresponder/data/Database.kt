@@ -20,8 +20,14 @@ interface ContactDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addContact(contact: ContactEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertContact(contact: ContactEntity)
+
     @Delete
     suspend fun removeContact(contact: ContactEntity)
+
+    @Query("DELETE FROM selected_contacts")
+    suspend fun clearAll()
 }
 
 // ── Feedback ──────────────────────────────────────────────────────────────────
@@ -46,6 +52,28 @@ interface FeedbackDao {
     suspend fun getAllFeedback(): List<FeedbackEntity>
 }
 
+// ── Cached Transcription ────────────────────────────────────────────────────────
+
+@Entity(tableName = "cached_response")
+data class CachedResponseEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val englishText: String,
+    val hindiText: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)
+
+@Dao
+interface CachedResponseDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(response: CachedResponseEntity)
+
+    @Query("SELECT * FROM cached_response ORDER BY cachedAt DESC LIMIT 1")
+    suspend fun getLatest(): CachedResponseEntity?
+
+    @Query("DELETE FROM cached_response")
+    suspend fun clearAll()
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Strip country code and keep only the last 10 digits for consistent matching */
@@ -56,8 +84,13 @@ fun normalizePhone(number: String): String {
 
 // ── Database ──────────────────────────────────────────────────────────────────
 
-@Database(entities = [ContactEntity::class, FeedbackEntity::class], version = 2, exportSchema = false)
+@Database(
+    entities = [ContactEntity::class, FeedbackEntity::class, CachedResponseEntity::class],
+    version = 3,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun contactDao(): ContactDao
     abstract fun feedbackDao(): FeedbackDao
+    abstract fun cachedResponseDao(): CachedResponseDao
 }

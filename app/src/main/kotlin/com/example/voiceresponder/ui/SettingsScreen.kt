@@ -1,4 +1,4 @@
-package com.example.voiceresponder.ui
+﻿package com.example.voiceresponder.ui
 
 import android.widget.Toast
 import androidx.compose.animation.*
@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,9 +30,11 @@ import com.example.voiceresponder.data.AppDatabase
 import com.example.voiceresponder.data.FeedbackEntity
 import com.example.voiceresponder.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
 
 // ── How-To step data ──────────────────────────────────────────────────────────
 
@@ -83,6 +86,25 @@ fun SettingsScreen(navController: NavController) {
     var mostUsefulFeature  by remember { mutableStateOf("") }
     var suggestions        by remember { mutableStateOf("") }
 
+    // Firebase user info
+    val firebaseUser = remember { FirebaseAuth.getInstance().currentUser }
+    val userEmail    = firebaseUser?.email ?: "—"
+    val userPhone    = firebaseUser?.phoneNumber ?: ""
+
+    // Load phone from Firestore if not in Auth (email-auth users store it there)
+    var profilePhone by remember { mutableStateOf(userPhone) }
+    LaunchedEffect(firebaseUser?.uid) {
+        if (profilePhone.isBlank() && firebaseUser?.uid != null) {
+            try {
+                val doc = FirebaseFirestore.getInstance()
+                    .collection("users").document(firebaseUser.uid).get().await()
+                profilePhone = (doc.getString("phoneNumber") ?: doc.getString("phone") ?: "").ifBlank { "—" }
+            } catch (_: Exception) { profilePhone = "—" }
+        } else if (profilePhone.isBlank()) {
+            profilePhone = "—"
+        }
+    }
+
     // Room DB
     val db = remember {
         Room.databaseBuilder(context, AppDatabase::class.java, "responder-db")
@@ -119,6 +141,56 @@ fun SettingsScreen(navController: NavController) {
                 verticalArrangement  = Arrangement.spacedBy(16.dp),
                 contentPadding       = PaddingValues(vertical = 16.dp)
             ) {
+
+                // ── Profile Card ──────────────────────────────────────────────
+                item {
+                    Card(
+                        shape  = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = DarkCard),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier          = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 18.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Avatar circle with initials
+                            Box(
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        androidx.compose.ui.graphics.Brush.linearGradient(
+                                            listOf(Teal400, Color(0xFF7C4DFF))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text       = userEmail.firstOrNull()?.uppercaseChar()?.toString() ?: "U",
+                                    fontSize   = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color      = Color.White
+                                )
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text       = userEmail,
+                                    fontSize   = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color      = OnDarkText
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Phone, contentDescription = null, tint = Teal400, modifier = Modifier.size(13.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(profilePhone, fontSize = 12.sp, color = SubText)
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // ── Permissions & Features ────────────────────────────────────
                 item {
@@ -300,7 +372,17 @@ fun SettingsScreen(navController: NavController) {
                                             return@Button
                                         }
                                         scope.launch {
+                                            val uid = FirebaseAuth.getInstance().currentUser?.uid
+                                            val feedbackMap = mapOf(
+                                                "rating"            to starRating,
+                                                "easeOfUse"         to easeOfUse.ifBlank { "Not answered" },
+                                                "smsWorking"        to smsWorking.ifBlank { "Not answered" },
+                                                "mostUsefulFeature" to mostUsefulFeature.ifBlank { "Not answered" },
+                                                "suggestions"       to suggestions.ifBlank { "—" },
+                                                "timestamp"         to System.currentTimeMillis()
+                                            )
                                             withContext(Dispatchers.IO) {
+                                                // Save to local Room DB
                                                 db.feedbackDao().insertFeedback(
                                                     FeedbackEntity(
                                                         rating              = starRating,
@@ -310,6 +392,18 @@ fun SettingsScreen(navController: NavController) {
                                                         suggestions         = suggestions.ifBlank { "—" }
                                                     )
                                                 )
+                                            }
+                                                                                                                                                                                // Save to Firestore root-level /feedback/ collection
+                                            val firestoreMap = feedbackMap + mapOf("uid" to (uid ?: "anonymous"))
+                                            try {
+                                                val ref = FirebaseFirestore.getInstance()
+                                                    .collection("feedback")
+                                                    .add(firestoreMap)
+                                                    .await()
+                                                android.util.Log.d("Feedback", "Saved OK id=${ref.id}")
+                                            } catch (e: Exception) {
+                                                android.util.Log.e("Feedback", "FAILED: ${e.message}")
+                                                Toast.makeText(context, "Feedback error: ${e.message}", Toast.LENGTH_LONG).show()
                                             }
                                             // Reset form
                                             starRating        = 0
@@ -408,13 +502,17 @@ private fun FeedbackSection(label: String, content: @Composable () -> Unit) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ChipRow(
     options: List<String>,
     selected: String,
     onSelect: (String) -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement   = Arrangement.spacedBy(8.dp)
+    ) {
         options.forEach { option ->
             val isSelected = option == selected
             Box(
@@ -433,6 +531,7 @@ private fun ChipRow(
                     option,
                     color      = if (isSelected) Teal400 else SubText,
                     fontSize   = 13.sp,
+                    softWrap   = false,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                 )
             }

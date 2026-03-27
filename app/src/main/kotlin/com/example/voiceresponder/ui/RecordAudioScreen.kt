@@ -22,9 +22,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.room.Room
 import com.example.voiceresponder.audio.AudioRecorder
+import com.example.voiceresponder.data.AppDatabase
+import com.example.voiceresponder.data.CachedResponseEntity
 import com.example.voiceresponder.remote.CloudinaryHelper
 import com.example.voiceresponder.remote.FirebaseHelper
+import com.example.voiceresponder.remote.TranscriptionHelper
+import com.example.voiceresponder.remote.TranslationHelper
 import com.example.voiceresponder.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import java.io.File
@@ -34,17 +39,26 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun RecordAudioScreen(navController: NavController) {
-    var isRecording   by remember { mutableStateOf(false) }
-    var isPlaying     by remember { mutableStateOf(false) }
-    var showDeleteDlg by remember { mutableStateOf(false) }
-    var fileExists    by remember { mutableStateOf(false) }
+    var isRecording      by remember { mutableStateOf(false) }
+    var isPlaying        by remember { mutableStateOf(false) }
+    var showDeleteDlg    by remember { mutableStateOf(false) }
+    var fileExists       by remember { mutableStateOf(false) }
+    // "" = idle, "processing" = transcribing, "ready" = cached, "error" = failed
+    var processingStatus by remember { mutableStateOf("") }
 
-    val context     = LocalContext.current
-    val audioFile   = remember { File(context.filesDir, "default_response.mp4") }
-    val recorder    = remember { AudioRecorder(context) }
-    val scope       = rememberCoroutineScope()
-    val cloudHelper = remember { CloudinaryHelper() }
-    val fbHelper    = remember { FirebaseHelper() }
+    val context             = LocalContext.current
+    val audioFile           = remember { File(context.filesDir, "default_response.mp4") }
+    val recorder            = remember { AudioRecorder(context) }
+    val scope               = rememberCoroutineScope()
+    val cloudHelper         = remember { CloudinaryHelper() }
+    val fbHelper            = remember { FirebaseHelper() }
+    val transcriptionHelper = remember { TranscriptionHelper() }
+    val translationHelper   = remember { TranslationHelper() }
+    val db                  = remember {
+        Room.databaseBuilder(context, AppDatabase::class.java, "responder-db")
+            .fallbackToDestructiveMigration()
+            .build()
+    }
     val uid         = remember { FirebaseAuth.getInstance().currentUser?.uid }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
@@ -163,13 +177,67 @@ fun RecordAudioScreen(navController: NavController) {
                                 isRecording = false
                                 fileExists  = true
                                 Toast.makeText(context, "Recording saved!", Toast.LENGTH_SHORT).show()
-                                // Upload to Cloudinary + save URL to Firestore for cross-device restore
+
                                 scope.launch {
+                                    // ── 1. Upload to Cloudinary + save URL ──
                                     val result = withContext(Dispatchers.IO) {
                                         cloudHelper.uploadAudio(audioFile)
                                     }
                                     if (result != null && uid != null) {
                                         withContext(Dispatchers.IO) { fbHelper.saveAudioUrl(uid, result.url) }
+                                    }
+
+                                    // ── 2. Pre-transcribe + translate + cache ──
+                                    processingStatus = "processing"
+                                    try {
+                                        val assemblyUrl = withContext(Dispatchers.IO) {
+                                            transcriptionHelper.uploadAudio(audioFile)
+                                        }
+                                        if (assemblyUrl != null) {
+                                            val transcriptId = withContext(Dispatchers.IO) {
+                                                transcriptionHelper.submitJob(assemblyUrl)
+                                            }
+                                            if (transcriptId != null) {
+                                                val pollPair = withContext(Dispatchers.IO) {
+                                                    transcriptionHelper.pollResult(transcriptId)
+                                                }
+                                                if (pollPair != null) {
+                                                    val (transcript, detectedLang) = pollPair
+                                                    val englishText: String
+                                                    val hindiText: String
+                                                    if (detectedLang == "hi") {
+                                                        hindiText   = transcript
+                                                        englishText = withContext(Dispatchers.IO) {
+                                                            translationHelper.translateToEnglish(transcript)
+                                                        } ?: transcript
+                                                    } else {
+                                                        englishText = transcript
+                                                        hindiText   = withContext(Dispatchers.IO) {
+                                                            translationHelper.translateToHindi(transcript)
+                                                        } ?: transcript
+                                                    }
+                                                    // Save to cache
+                                                    withContext(Dispatchers.IO) {
+                                                        db.cachedResponseDao().clearAll()
+                                                        db.cachedResponseDao().insert(
+                                                            CachedResponseEntity(
+                                                                englishText = englishText,
+                                                                hindiText   = hindiText
+                                                            )
+                                                        )
+                                                    }
+                                                    processingStatus = "ready"
+                                                } else {
+                                                    processingStatus = "error"
+                                                }
+                                            } else {
+                                                processingStatus = "error"
+                                            }
+                                        } else {
+                                            processingStatus = "error"
+                                        }
+                                    } catch (e: Exception) {
+                                        processingStatus = "error"
                                     }
                                 }
                             } else {
@@ -204,7 +272,44 @@ fun RecordAudioScreen(navController: NavController) {
                 fontSize = 14.sp
             )
 
-            Spacer(Modifier.height(40.dp))
+            // Processing status badge
+            when (processingStatus) {
+                "processing" -> {
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier  = Modifier.size(14.dp),
+                            color     = Teal400,
+                            strokeWidth = 2.dp
+                        )
+                        Text(
+                            "Preparing text response…",
+                            color    = SubText,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+                "ready" -> {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "✓  Text response ready",
+                        color    = Teal400,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                "error" -> {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "⚠  Could not prepare text — will process on call",
+                        color    = ErrorRed,
+                        fontSize = 12.sp
+                    )
+                }
+            }
 
             // ── Audio file card (appears when recording exists) ──
             if (fileExists && !isRecording) {

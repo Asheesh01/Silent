@@ -80,18 +80,25 @@ fun DashboardScreen(navController: NavController) {
     // Data-load lambda extracted so it can be called after permissions are granted
     val loadData: suspend () -> Unit = {
         withContext(Dispatchers.IO) {
-            val contacts = loadDeviceContacts(context.contentResolver)
-            val saved    = contactDao.getAllContacts().map { it.phoneNumber }.toSet()
-            // Load responder state from Firestore so it syncs across devices
+            val contacts    = loadDeviceContacts(context.contentResolver)
             val savedActive = uid?.let { fbHelper.loadResponderState(it) } ?: false
+
+            // Load contacts from Firestore (per-UID) instead of Room DB
+            // so switching accounts shows the correct data for each user
+            val cloudContacts: Set<String> = if (uid != null) {
+                val fromCloud = fbHelper.loadContacts(uid)
+                // Sync cloud contacts back into local Room DB for this session
+                contactDao.clearAll()
+                fromCloud.forEach { contactDao.insertContact(ContactEntity(it)) }
+                fromCloud.toSet()
+            } else {
+                contactDao.getAllContacts().map { it.phoneNumber }.toSet()
+            }
+
             withContext(Dispatchers.Main) {
                 deviceContacts   = contacts
-                selectedContacts = saved
+                selectedContacts = cloudContacts
                 isActive         = savedActive
-                // Only start the service once permissions have been granted and
-                // the app is back in the foreground (i.e. inside the callback,
-                // not while the system dialog is still open). This prevents the
-                // ForegroundServiceStartNotAllowedException on Android 12+.
                 if (savedActive) {
                     val intent = Intent(context, ResponderService::class.java).apply {
                         action = "ACTION_START_MONITORING"

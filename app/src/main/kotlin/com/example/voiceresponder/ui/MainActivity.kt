@@ -42,6 +42,7 @@ fun AppNavigation() {
         composable("contacts")    { ContactListScreen(navController) }
         composable("record")      { RecordAudioScreen(navController) }
         composable("settings")    { SettingsScreen(navController) }
+        composable("onboarding")   { OnboardingScreen(navController) }
     }
 }
 

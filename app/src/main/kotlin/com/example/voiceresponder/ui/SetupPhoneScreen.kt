@@ -19,7 +19,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupPhoneScreen(navController: NavController) {
-    var phoneNumber by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("+91") }
     var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -48,8 +48,11 @@ fun SetupPhoneScreen(navController: NavController) {
 
         OutlinedTextField(
             value = phoneNumber,
-            onValueChange = { phoneNumber = it },
-            label = { Text("Phone Number (with +country code)") },
+            onValueChange = {
+                // Never allow user to delete the "+91" prefix
+                if (it.startsWith("+91")) phoneNumber = it
+            },
+            label = { Text("Phone Number") },
             placeholder = { Text("+91XXXXXXXXXX") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             modifier = Modifier.fillMaxWidth(),
@@ -60,8 +63,8 @@ fun SetupPhoneScreen(navController: NavController) {
 
         Button(
             onClick = {
-                if (phoneNumber.isBlank() || !phoneNumber.startsWith("+")) {
-                    Toast.makeText(context, "Enter phone number with country code (e.g. +91...)", Toast.LENGTH_LONG).show()
+                if (phoneNumber.length < 13 || !phoneNumber.startsWith("+91")) {
+                    Toast.makeText(context, "Enter a valid 10-digit Indian mobile number", Toast.LENGTH_LONG).show()
                     return@Button
                 }
                 val uid = auth.currentUser?.uid
@@ -79,7 +82,7 @@ fun SetupPhoneScreen(navController: NavController) {
                     .set(userMap)
                     .addOnSuccessListener {
                         isLoading = false
-                        navController.navigate("dashboard") {
+                        navController.navigate("onboarding") {
                             popUpTo("setup_phone") { inclusive = true }
                         }
                     }

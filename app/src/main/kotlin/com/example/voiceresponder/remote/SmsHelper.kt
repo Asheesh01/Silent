@@ -41,19 +41,19 @@ class SmsHelper(private val context: Context) {
         }
 
         val sb = StringBuilder()
-        sb.appendLine("📞 I missed your call.")
+        sb.appendLine("Hey! I'm a bit busy right now, that's why I missed your call 😁")
 
         if (link.isNotBlank()) {
-            sb.appendLine("🎙 Voice Message: $link")
+            sb.appendLine("🎧 Here's a quick message: $link")
         }
 
         if (!englishText.isNullOrBlank()) {
             sb.appendLine()
-            sb.appendLine("📝 Message (EN): $englishText")
+            sb.appendLine("💬 Here's what I wanted to say: $englishText")
         }
-        if (!hindiText.isNullOrBlank()) {
+        if (!hindiText.isNullOrBlank() && hindiText != englishText) {
             sb.appendLine()
-            sb.appendLine("📝 संदेश (HI): $hindiText")
+            sb.appendLine("💬 $hindiText")
         }
 
         val fullMessage = sb.toString().trim()

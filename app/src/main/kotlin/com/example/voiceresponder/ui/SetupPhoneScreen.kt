@@ -194,7 +194,9 @@ fun SetupPhoneScreen(navController: NavController) {
                             focusedTextColor        = OnDarkText,
                             unfocusedTextColor      = OnDarkText,
                             disabledTextColor       = OnDarkText,
-                            cursorColor             = Color.Transparent
+                            cursorColor             = Color.Transparent,
+                            focusedContainerColor   = CardInput,
+                            unfocusedContainerColor = CardInput
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )

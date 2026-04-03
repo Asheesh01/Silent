@@ -41,8 +41,9 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     // ── Load (called once after permissions granted) ───────────────────────────
     fun loadData(contentResolver: ContentResolver, audioFile: File) {
         if (dataLoaded) {
-            // Still refresh fileExists in case user just recorded something
+            // Refresh local state on every subsequent call (fast, no network)
             fileExists = audioFile.exists()
+            refreshContactsFromRoom()   // ← pick up contacts added in ContactListScreen
             return
         }
         viewModelScope.launch {

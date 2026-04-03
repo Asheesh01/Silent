@@ -174,34 +174,43 @@ fun SetupPhoneScreen(navController: NavController) {
                     )
                     Spacer(Modifier.height(16.dp))
 
-                    // ── Phone Number Field ─────────────────────────────────────
+                    // ── Phone Number Field (READ-ONLY — filled only by SIM picker) ──
                     OutlinedTextField(
                         value         = phoneNumber,
-                        onValueChange = {
-                            if (it.startsWith("+91") && it.length <= 13) {
-                                phoneNumber  = it
-                                errorMessage = ""
-                                hintShown    = false
-                            }
+                        onValueChange = { /* read-only — do not allow manual input */ },
+                        label         = { Text("Phone Number") },
+                        placeholder   = { Text("Tap 'Use My SIM Number' below", color = SubText) },
+                        leadingIcon   = { Icon(Icons.Default.Phone, null, tint = Teal400) },
+                        trailingIcon  = {
+                            if (hintShown)
+                                Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF4CAF50))
                         },
-                        label           = { Text("Phone Number") },
-                        placeholder     = { Text("+91XXXXXXXXXX", color = SubText) },
-                        leadingIcon     = { Icon(Icons.Default.Phone, null, tint = Teal400) },
-                        trailingIcon    = {
-                            if (hintShown) Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF4CAF50))
-                        },
-                        singleLine      = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        shape           = RoundedCornerShape(12.dp),
-                        colors          = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor   = Teal400,
-                            unfocusedBorderColor = if (hintShown) Color(0xFF4CAF50) else Color(0xFFBBCCDD),
-                            focusedTextColor     = OnDarkText,
-                            unfocusedTextColor   = OnDarkText,
-                            cursorColor          = Teal400
+                        readOnly      = true,
+                        singleLine    = true,
+                        shape         = RoundedCornerShape(12.dp),
+                        colors        = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor      = if (hintShown) Color(0xFF4CAF50) else Teal400,
+                            unfocusedBorderColor    = if (hintShown) Color(0xFF4CAF50) else Color(0xFFBBCCDD),
+                            focusedTextColor        = OnDarkText,
+                            unfocusedTextColor      = OnDarkText,
+                            disabledTextColor       = OnDarkText,
+                            cursorColor             = Color.Transparent
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    // Show hint when no number selected yet
+                    if (!hintShown) {
+                        Spacer(Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, null, tint = Teal400, modifier = Modifier.size(13.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "Please tap the button below to auto-detect your SIM number.",
+                                color = SubText, fontSize = 11.sp
+                            )
+                        }
+                    }
 
                     Spacer(Modifier.height(10.dp))
 
@@ -247,10 +256,11 @@ fun SetupPhoneScreen(navController: NavController) {
 
                     // ── Confirm & Continue button ─────────────────────────────
                     GradientButton(
-                        text      = "Confirm & Continue",
+                        text      = if (hintShown) "Confirm & Continue" else "Select Your SIM Number First",
                         gradient  = btnGradient,
                         isLoading = isLoading,
-                        icon      = Icons.Default.Verified,
+                        icon      = if (hintShown) Icons.Default.Verified else Icons.Default.Lock,
+                        enabled   = hintShown,
                         onClick   = { confirmNumber() }
                     )
                 }

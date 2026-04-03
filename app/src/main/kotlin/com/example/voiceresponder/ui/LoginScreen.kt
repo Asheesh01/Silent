@@ -459,37 +459,44 @@ fun OrDivider() {
 
 @Composable
 fun GoogleSignInButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
-    OutlinedButton(
+    Button(
         onClick  = onClick,
         enabled  = enabled,
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp),
         shape  = RoundedCornerShape(14.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A3F55)),
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = Color(0xFF0D1B2A),
-            contentColor   = OnDarkText
-        )
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.White,
+            contentColor   = Color(0xFF3C4043)
+        ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
-        // Google "G" coloured icon using a text label (no asset needed)
+        // Colourful Google "G" icon
         Box(
             modifier = Modifier
-                .size(22.dp).clip(CircleShape)
+                .size(24.dp)
+                .clip(CircleShape)
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 "G",
-                fontSize   = 13.sp,
+                fontSize   = 15.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color      = Color(0xFF4285F4)
+                color      = Color(0xFF4285F4)   // Google blue
             )
         }
-        Spacer(Modifier.width(12.dp))
-        Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = OnDarkText)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text,
+            fontSize   = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color      = Color(0xFF3C4043)       // Google dark grey text
+        )
     }
 }
+
 
 @Composable
 private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(

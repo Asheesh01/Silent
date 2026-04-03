@@ -93,4 +93,17 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun contactDao(): ContactDao
     abstract fun feedbackDao(): FeedbackDao
     abstract fun cachedResponseDao(): CachedResponseDao
+
+    companion object {
+        @Volatile private var INSTANCE: AppDatabase? = null
+
+        fun getOrCreate(context: android.content.Context): AppDatabase =
+            INSTANCE ?: synchronized(this) {
+                INSTANCE ?: androidx.room.Room
+                    .databaseBuilder(context.applicationContext, AppDatabase::class.java, "responder-db")
+                    .fallbackToDestructiveMigration()
+                    .build()
+                    .also { INSTANCE = it }
+            }
+    }
 }

@@ -5,6 +5,8 @@ import android.content.ContentResolver
 import android.content.Intent
 import android.media.MediaPlayer
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -31,9 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.room.Room
-import com.example.voiceresponder.data.AppDatabase
 import com.example.voiceresponder.data.ContactEntity
 import com.example.voiceresponder.data.normalizePhone
 import com.example.voiceresponder.remote.FirebaseHelper
@@ -48,26 +49,22 @@ import java.io.File
 
 @Composable
 fun DashboardScreen(navController: NavController) {
-    val context    = LocalContext.current
-    val scope      = rememberCoroutineScope()
-    val fbHelper   = remember { FirebaseHelper() }
-    val uid        = remember { FirebaseAuth.getInstance().currentUser?.uid }
+    val context = LocalContext.current
+    val scope   = rememberCoroutineScope()
 
-    val database = remember {
-        Room.databaseBuilder(context, AppDatabase::class.java, "responder-db")
-            .fallbackToDestructiveMigration()
-            .build()
-    }
-    val contactDao = database.contactDao()
+    // ── ViewModel survives navigation back from Contacts / Record / Settings ──
+    val vm: DashboardViewModel = viewModel()
 
-    var isActive         by remember { mutableStateOf(false) }
-    var selectedContacts by remember { mutableStateOf(setOf<String>()) }
-    var selectedTab      by remember { mutableIntStateOf(0) }
-    var deviceContacts   by remember { mutableStateOf(listOf<DeviceContact>()) }
+    // Convenient local aliases that point at ViewModel state
+    val isActive         by remember { derivedStateOf { vm.isActive } }
+    val selectedContacts by remember { derivedStateOf { vm.selectedContacts } }
+    val deviceContacts   by remember { derivedStateOf { vm.deviceContacts } }
+    val fileExists       by remember { derivedStateOf { vm.fileExists } }
 
-    // Audio state
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    // Audio state (local — not needed in ViewModel)
     val audioFile   = remember { File(context.filesDir, "default_response.mp4") }
-    var fileExists  by remember { mutableStateOf(audioFile.exists()) }
     var isPlaying   by remember { mutableStateOf(false) }
     var showDelDlg  by remember { mutableStateOf(false) }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
@@ -76,83 +73,56 @@ fun DashboardScreen(navController: NavController) {
         onDispose { mediaPlayer?.release() }
     }
 
-    // ── Instantly refresh recording state when returning from Record tab ──
-    val lifecycleOwnerForFile = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwnerForFile) {
-        val obs = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                fileExists = audioFile.exists()
-            }
-        }
-        lifecycleOwnerForFile.lifecycle.addObserver(obs)
-        onDispose { lifecycleOwnerForFile.lifecycle.removeObserver(obs) }
-    }
-
-    // ── Request permissions once, after the user has logged in ───────────
-    // Data-load lambda extracted so it can be called after permissions are granted
-    val loadData: suspend () -> Unit = {
-        withContext(Dispatchers.IO) {
-            val contacts    = loadDeviceContacts(context.contentResolver)
-            val savedActive = uid?.let { fbHelper.loadResponderState(it) } ?: false
-
-            // Load contacts from Firestore (per-UID) instead of Room DB
-            // so switching accounts shows the correct data for each user
-            val cloudContacts: Set<String> = if (uid != null) {
-                val fromCloud = fbHelper.loadContacts(uid)
-                // Sync cloud contacts back into local Room DB for this session
-                contactDao.clearAll()
-                fromCloud.forEach { contactDao.insertContact(ContactEntity(it)) }
-                fromCloud.toSet()
-            } else {
-                contactDao.getAllContacts().map { it.phoneNumber }.toSet()
-            }
-
-            withContext(Dispatchers.Main) {
-                deviceContacts   = contacts
-                selectedContacts = cloudContacts
-                isActive         = savedActive
-                if (savedActive) {
-                    val intent = Intent(context, ResponderService::class.java).apply {
-                        action = "ACTION_START_MONITORING"
-                    }
-                    context.startForegroundService(intent)
-                }
-            }
-        }
-    }
-
+    // ── Permission launcher ───────────────────────────────────────────────────
+    // Triggered ONCE on first launch. After that, ViewModel.dataLoaded prevents re-fetch.
     val permLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) {
-        // Called after the user responds to every permission dialog.
-        // The app is fully in the foreground again here, so it is safe
-        // to start foreground services and load data.
-        scope.launch { loadData() }
+        // Permissions answered — load data for the first time
+        vm.loadData(context.contentResolver, audioFile)
+        // Auto-start the service if it was already active
+        if (vm.isActive) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    context.startForegroundService(
+                        Intent(context, ResponderService::class.java).apply {
+                            action = "ACTION_START_MONITORING"
+                        }
+                    )
+                } catch (_: Exception) {}
+            }, 300)
+        }
     }
 
-    // ── Lifecycle-aware permission request ────────────────────────────────
-    // Wait until the Activity reaches ON_RESUME before firing the permission
-    // dialog. This guarantees the app is fully in the foreground, which:
-    //  1. Prevents ForegroundServiceStartNotAllowedException on Android 12+
-    //  2. Fixes the post-installation close (installer handoff completes first)
+    // ── Lifecycle observer ────────────────────────────────────────────────────
     val lifecycleOwner = LocalLifecycleOwner.current
+    // permissionsRequested is kept in a Ref (not remember) so it survives
+    // recomposition but resets when the process dies — correct behavior.
     var permissionsRequested by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME && !permissionsRequested) {
-                permissionsRequested = true
-                val perms = mutableListOf(
-                    Manifest.permission.READ_PHONE_STATE,
-                    Manifest.permission.READ_CALL_LOG,
-                    Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.SEND_SMS,
-                    Manifest.permission.READ_CONTACTS
-                )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    perms.add(Manifest.permission.POST_NOTIFICATIONS)
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (!permissionsRequested) {
+                    // First resume: ask for permissions (data loads after grant)
+                    permissionsRequested = true
+                    val perms = mutableListOf(
+                        Manifest.permission.READ_PHONE_STATE,
+                        Manifest.permission.READ_CALL_LOG,
+                        Manifest.permission.RECORD_AUDIO,
+                        Manifest.permission.SEND_SMS,
+                        Manifest.permission.READ_CONTACTS
+                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        perms.add(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    permLauncher.launch(perms.toTypedArray())
+                } else if (vm.dataLoaded) {
+                    // Returning from Contacts / Record / Settings:
+                    // Only do a fast local Room refresh — NO Firestore call.
+                    vm.refreshContactsFromRoom()
+                    vm.fileExists = audioFile.exists()
                 }
-                permLauncher.launch(perms.toTypedArray())
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -169,7 +139,7 @@ fun DashboardScreen(navController: NavController) {
             confirmButton = {
                 TextButton(onClick = {
                     mediaPlayer?.release(); mediaPlayer = null; isPlaying = false
-                    audioFile.delete(); fileExists = false; showDelDlg = false
+                    audioFile.delete(); vm.fileExists = false; showDelDlg = false
                     Toast.makeText(context, "Recording deleted", Toast.LENGTH_SHORT).show()
                 }) { Text("Delete", color = ErrorRed, fontWeight = FontWeight.Bold) }
             },
@@ -286,18 +256,23 @@ fun DashboardScreen(navController: NavController) {
                             Switch(
                                 checked = isActive,
                                 onCheckedChange = { checked ->
-                                    isActive = checked
-                                    val intent = Intent(context, ResponderService::class.java).apply {
+                                    vm.isActive = checked
+                                    val svcIntent = Intent(context, ResponderService::class.java).apply {
                                         action = "ACTION_START_MONITORING"
                                     }
                                     if (checked) {
-                                        context.startForegroundService(intent)
+                                        try {
+                                            context.startForegroundService(svcIntent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Service start failed — try toggling again", Toast.LENGTH_SHORT).show()
+                                            vm.isActive = false
+                                        }
                                     } else {
-                                        context.stopService(intent)
+                                        context.stopService(svcIntent)
                                     }
                                     // Save to Firestore for cross-device sync
                                     scope.launch {
-                                        uid?.let { fbHelper.saveResponderState(it, checked) }
+                                        vm.uid?.let { FirebaseHelper().saveResponderState(it, checked) }
                                     }
                                 },
                                 colors = SwitchDefaults.colors(
@@ -381,10 +356,10 @@ fun DashboardScreen(navController: NavController) {
                                 IconButton(
                                     onClick = {
                                         scope.launch {
-                                            withContext(Dispatchers.IO) { contactDao.removeContact(ContactEntity(normalized)) }
-                                            val updated = selectedContacts - normalized
-                                            selectedContacts = updated
-                                            uid?.let { syncHelper.pushContactsToCloud(it, updated) }
+                                            withContext(Dispatchers.IO) { vm.contactDao.removeContact(ContactEntity(normalized)) }
+                                            val updated = vm.selectedContacts - normalized
+                                            vm.selectedContacts = updated
+                                            vm.uid?.let { syncHelper.pushContactsToCloud(it, updated) }
                                         }
                                     }
                                 ) {

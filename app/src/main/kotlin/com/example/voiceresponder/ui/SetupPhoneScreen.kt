@@ -40,10 +40,11 @@ import kotlinx.coroutines.tasks.await
 fun SetupPhoneScreen(navController: NavController) {
 
     // ── UI State ──────────────────────────────────────────────────────────────
-    var phoneNumber  by remember { mutableStateOf("+91") }
-    var isLoading    by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
-    var hintShown    by remember { mutableStateOf(false) }
+    var phoneNumber    by remember { mutableStateOf("+91") }
+    var isLoading      by remember { mutableStateOf(false) }
+    var isHintLoading  by remember { mutableStateOf(false) }   // SIM picker fetch in progress
+    var errorMessage   by remember { mutableStateOf("") }
+    var hintShown      by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val auth    = FirebaseAuth.getInstance()
@@ -58,16 +59,23 @@ fun SetupPhoneScreen(navController: NavController) {
     val hintLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
+        isHintLoading = false   // picker shown / closed — loading done
         if (result.resultCode == Activity.RESULT_OK) {
             val phone = Identity.getSignInClient(context)
                 .getPhoneNumberFromIntent(result.data)
             if (!phone.isNullOrBlank()) {
                 // Normalise to +91XXXXXXXXXX
+                // Google's hint API can return numbers with unexpected country codes
+                // (e.g. "+44916392939598"). We always take the last 10 digits and
+                // prepend +91, which is reliable for Indian SIMs.
                 val digits = phone.filter { it.isDigit() }
                 phoneNumber = when {
-                    digits.length == 10               -> "+91$digits"
-                    digits.length == 12 && digits.startsWith("91") -> "+$digits"
-                    else                              -> phone
+                    digits.length == 10 -> "+91$digits"
+                    digits.length >= 11 && digits.takeLast(10).length == 10 -> {
+                        // Last 10 digits are the actual subscriber number
+                        "+91${digits.takeLast(10)}"
+                    }
+                    else -> phone
                 }
                 errorMessage = ""
                 hintShown    = true
@@ -77,15 +85,18 @@ fun SetupPhoneScreen(navController: NavController) {
 
     // ── Launch Google's phone picker ──────────────────────────────────────────
     fun showPhoneHint() {
+        isHintLoading = true
         val request = GetPhoneNumberHintIntentRequest.builder().build()
         Identity.getSignInClient(context)
             .getPhoneNumberHintIntent(request)
             .addOnSuccessListener { pendingIntent ->
+                // Picker is ready — spinner clears in the launcher callback
                 hintLauncher.launch(
                     IntentSenderRequest.Builder(pendingIntent).build()
                 )
             }
             .addOnFailureListener {
+                isHintLoading = false
                 // Device has no SIM or Play Services unavailable → let user type manually
                 errorMessage = "Could not detect SIM. Please type your number manually."
             }
@@ -218,15 +229,33 @@ fun SetupPhoneScreen(navController: NavController) {
 
                     // ── "Use My SIM Number" pill button ───────────────────────
                     OutlinedButton(
-                        onClick  = { showPhoneHint() },
-                        modifier = Modifier.fillMaxWidth(),
+                        onClick  = { if (!isHintLoading) showPhoneHint() },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
                         shape    = RoundedCornerShape(12.dp),
                         colors   = ButtonDefaults.outlinedButtonColors(contentColor = Teal400),
-                        border   = androidx.compose.foundation.BorderStroke(1.dp, Teal400)
+                        border   = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isHintLoading) Teal400.copy(alpha = 0.4f) else Teal400
+                        )
                     ) {
-                        Icon(Icons.Default.SimCard, null, tint = Teal400, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Use My SIM Number", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        if (isHintLoading) {
+                            CircularProgressIndicator(
+                                modifier    = Modifier.size(16.dp),
+                                color       = Teal400,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                "Detecting SIM...",
+                                fontSize   = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color      = Teal400.copy(alpha = 0.7f)
+                            )
+                        } else {
+                            Icon(Icons.Default.SimCard, null, tint = Teal400, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Use My SIM Number", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        }
                     }
 
                     // ── Security badge ────────────────────────────────────────
@@ -258,12 +287,16 @@ fun SetupPhoneScreen(navController: NavController) {
 
                     // ── Confirm & Continue button ─────────────────────────────
                     GradientButton(
-                        text      = if (hintShown) "Confirm & Continue" else "Select Your SIM Number First",
-                        gradient  = btnGradient,
-                        isLoading = isLoading,
-                        icon      = if (hintShown) Icons.Default.Verified else Icons.Default.Lock,
-                        enabled   = hintShown,
-                        onClick   = { confirmNumber() }
+                        text        = if (hintShown) "Confirm & Continue" else "Select SIM First",
+                        gradient    = if (hintShown) btnGradient
+                                      else Brush.horizontalGradient(
+                                          listOf(Color(0xFF4A5568), Color(0xFF2D3748))
+                                      ),
+                        isLoading   = isLoading,
+                        icon        = if (hintShown) Icons.Default.Verified else Icons.Default.Lock,
+                        enabled     = hintShown,
+                        pendingMode = !hintShown,
+                        onClick     = { confirmNumber() }
                     )
                 }
             }
@@ -271,7 +304,7 @@ fun SetupPhoneScreen(navController: NavController) {
     }
 }
 
-// ── Small reusable gradient button ────────────────────────────────────────────
+// ── Premium gradient button ───────────────────────────────────────────────────
 @Composable
 private fun GradientButton(
     text: String,
@@ -279,33 +312,61 @@ private fun GradientButton(
     isLoading: Boolean,
     onClick: () -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    pendingMode: Boolean = false          // true → beautiful locked style
 ) {
+    val shape = RoundedCornerShape(14.dp)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp)
-            .background(
-                if (enabled && !isLoading) gradient
-                else Brush.horizontalGradient(listOf(Color(0xFFBBCCDD), Color(0xFFBBCCDD))),
-                shape = RoundedCornerShape(14.dp)
-            )
+            .height(54.dp)
+            .background(brush = gradient, shape = shape),
+        contentAlignment = Alignment.Center
     ) {
+        // Frosted overlay for the pending/locked state
+        if (pendingMode) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        color = Color(0x33FFFFFF),   // 20 % white frost
+                        shape = shape
+                    )
+            )
+        }
+
         Button(
-            onClick   = onClick,
+            onClick   = { if (!pendingMode) onClick() },
             modifier  = Modifier.fillMaxSize(),
-            enabled   = enabled && !isLoading,
-            colors    = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+            enabled   = !isLoading,        // always technically enabled so ripple still fires
+            colors    = ButtonDefaults.buttonColors(containerColor = Color.Transparent,
+                                                    disabledContainerColor = Color.Transparent),
             elevation = ButtonDefaults.buttonElevation(0.dp)
         ) {
             if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                CircularProgressIndicator(
+                    modifier    = Modifier.size(20.dp),
+                    color       = Color.White,
+                    strokeWidth = 2.dp
+                )
             } else {
                 if (icon != null) {
-                    Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint     = if (pendingMode) Color(0xAAFFFFFF) else Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
                 }
-                Text(text, color = if (enabled) Color.White else SubText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    text       = text,
+                    color      = if (pendingMode) Color(0xCCFFFFFF) else Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize   = 16.sp,
+                    maxLines   = 1
+                )
             }
         }
     }

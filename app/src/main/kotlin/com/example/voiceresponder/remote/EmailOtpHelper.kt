@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
  *
  * Credentials are read from BuildConfig (set in build.gradle.kts).
  */
-object EmailOtpHelper {
+object  EmailOtpHelper {
 
     private const val TAG       = "EmailOtp"
     private const val API_URL   = "https://api.emailjs.com/api/v1.0/email/send"

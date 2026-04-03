@@ -53,11 +53,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun LoginScreen(navController: NavController) {
 
-    var email        by remember { mutableStateOf("") }
-    var password     by remember { mutableStateOf("") }
-    var isLoading    by remember { mutableStateOf(false) }
-    var showPassword by remember { mutableStateOf(false) }
-    var errorMsg     by remember { mutableStateOf("") }
+    var email          by remember { mutableStateOf("") }
+    var password       by remember { mutableStateOf("") }
+    var isLoading      by remember { mutableStateOf(false) }
+    var isGoogleLoading by remember { mutableStateOf(false) }   // separate Google loader
+    var showPassword   by remember { mutableStateOf(false) }
+    var errorMsg       by remember { mutableStateOf("") }
 
     // Forgot password dialog state
     var showForgotDialog  by remember { mutableStateOf(false) }
@@ -87,6 +88,7 @@ fun LoginScreen(navController: NavController) {
     val googleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
+        isGoogleLoading = false   // picker closed — stop spinner
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account    = task.getResult(ApiException::class.java)
@@ -420,9 +422,11 @@ fun LoginScreen(navController: NavController) {
 
                     // Google Sign-In button
                     GoogleSignInButton(
-                        text    = "Continue with Google",
-                        enabled = !isLoading
+                        text      = "Continue with Google",
+                        enabled   = !isLoading && !isGoogleLoading,
+                        isLoading = isGoogleLoading
                     ) {
+                        isGoogleLoading = true
                         googleClient.signOut().addOnCompleteListener {
                             googleLauncher.launch(googleClient.signInIntent)
                         }
@@ -458,9 +462,14 @@ fun OrDivider(textColor: Color = Color(0xFF8899AA)) {
 }
 
 @Composable
-fun GoogleSignInButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
+fun GoogleSignInButton(
+    text: String,
+    enabled: Boolean = true,
+    isLoading: Boolean = false,
+    onClick: () -> Unit
+) {
     Button(
-        onClick  = onClick,
+        onClick  = { if (!isLoading) onClick() },
         enabled  = enabled,
         modifier = Modifier
             .fillMaxWidth()
@@ -472,28 +481,43 @@ fun GoogleSignInButton(text: String, enabled: Boolean = true, onClick: () -> Uni
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
-        // Colourful Google "G" icon
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .clip(CircleShape)
-                .background(Color.White),
-            contentAlignment = Alignment.Center
-        ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier    = Modifier.size(18.dp),
+                color       = Color(0xFF4285F4),
+                strokeWidth = 2.dp
+            )
+            Spacer(Modifier.width(10.dp))
             Text(
-                "G",
+                "Signing in...",
                 fontSize   = 15.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color      = Color(0xFF4285F4)   // Google blue
+                fontWeight = FontWeight.SemiBold,
+                color      = Color(0xFF3C4043)
+            )
+        } else {
+            // Colourful Google "G" icon
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "G",
+                    fontSize   = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color      = Color(0xFF4285F4)   // Google blue
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text,
+                fontSize   = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color      = Color(0xFF3C4043)       // Google dark grey text
             )
         }
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text,
-            fontSize   = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            color      = Color(0xFF3C4043)       // Google dark grey text
-        )
     }
 }
 

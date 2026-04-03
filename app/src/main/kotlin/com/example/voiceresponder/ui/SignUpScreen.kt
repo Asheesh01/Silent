@@ -61,12 +61,13 @@ fun SignUpScreen(navController: NavController) {
     val passwordMismatch = confirmPwd.isNotEmpty() && password != confirmPwd
 
     // ── Flow state ────────────────────────────────────────────────────────────
-    var stage          by remember { mutableStateOf(SignUpStage.FORM) }
-    var isLoading      by remember { mutableStateOf(false) }
-    var otpCode        by remember { mutableStateOf("") }
-    var errorMessage   by remember { mutableStateOf("") }
-    var resendCooldown by remember { mutableIntStateOf(0) }
-    var attemptsLeft   by remember { mutableIntStateOf(3) }
+    var stage           by remember { mutableStateOf(SignUpStage.FORM) }
+    var isLoading       by remember { mutableStateOf(false) }
+    var isGoogleLoading by remember { mutableStateOf(false) }   // separate Google loader
+    var otpCode         by remember { mutableStateOf("") }
+    var errorMessage    by remember { mutableStateOf("") }
+    var resendCooldown  by remember { mutableIntStateOf(0) }
+    var attemptsLeft    by remember { mutableIntStateOf(3) }
 
     val context = LocalContext.current
     val auth    = remember { FirebaseAuth.getInstance() }
@@ -99,6 +100,7 @@ fun SignUpScreen(navController: NavController) {
     val googleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
+        isGoogleLoading = false   // picker closed — stop spinner
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account    = task.getResult(ApiException::class.java)
@@ -393,30 +395,51 @@ fun SignUpScreen(navController: NavController) {
                                     OrDivider()
                                     Spacer(Modifier.height(14.dp))
 
-                                    // Google Sign-Up — dark-card friendly teal-outlined style
+                                    // Google Sign-Up button — with loading state
                                     OutlinedButton(
                                         onClick  = {
-                                            googleClient.signOut().addOnCompleteListener {
-                                                googleLauncher.launch(googleClient.signInIntent)
+                                            if (!isGoogleLoading) {
+                                                isGoogleLoading = true
+                                                googleClient.signOut().addOnCompleteListener {
+                                                    googleLauncher.launch(googleClient.signInIntent)
+                                                }
                                             }
                                         },
-                                        enabled  = !isLoading,
+                                        enabled  = !isLoading && !isGoogleLoading,
                                         modifier = Modifier.fillMaxWidth().height(52.dp),
                                         shape    = RoundedCornerShape(14.dp),
-                                        border   = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF00BCD4)),
+                                        border   = androidx.compose.foundation.BorderStroke(
+                                            1.5.dp,
+                                            if (isGoogleLoading) Color(0xFF00BCD4).copy(alpha = 0.4f) else Color(0xFF00BCD4)
+                                        ),
                                         colors   = ButtonDefaults.outlinedButtonColors(
                                             containerColor = Color(0xFF0D1B2A),
                                             contentColor   = Color.White
                                         )
                                     ) {
-                                        Box(
-                                            modifier = Modifier.size(22.dp).clip(CircleShape).background(Color.White),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text("G", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4285F4))
+                                        if (isGoogleLoading) {
+                                            CircularProgressIndicator(
+                                                modifier    = Modifier.size(16.dp),
+                                                color       = Color(0xFF00BCD4),
+                                                strokeWidth = 2.dp
+                                            )
+                                            Spacer(Modifier.width(12.dp))
+                                            Text(
+                                                "Signing in...",
+                                                fontSize   = 15.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color      = Color(0xFF00BCD4).copy(alpha = 0.8f)
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier.size(22.dp).clip(CircleShape).background(Color.White),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text("G", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4285F4))
+                                            }
+                                            Spacer(Modifier.width(12.dp))
+                                            Text("Sign up with Google", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                                         }
-                                        Spacer(Modifier.width(12.dp))
-                                        Text("Sign up with Google", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                                     }
 
                                     Spacer(Modifier.height(20.dp))

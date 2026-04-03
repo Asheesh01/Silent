@@ -20,6 +20,10 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        // ── EmailJS credentials ───────────────────────────────────────────────
+        buildConfigField("String", "EMAILJS_SERVICE_ID",  "\"service_gz1d4hl\"")
+        buildConfigField("String", "EMAILJS_TEMPLATE_ID", "\"template_mkbneej\"")
+        buildConfigField("String", "EMAILJS_PUBLIC_KEY",  "\"dCW2d5SDu2ABz0h2y\"")
     }
 
     signingConfigs {
@@ -46,6 +50,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -84,6 +89,9 @@ dependencies {
     // ML Kit - On-device Translation (English <-> Hindi)
     implementation("com.google.mlkit:translate:17.0.2")
     
+    // Google Identity Services – Phone Number Hint (free, no SMS needed)
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+
     // OkHttp - for Cloud Speech-to-Text REST API
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

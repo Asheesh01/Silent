@@ -76,6 +76,18 @@ fun DashboardScreen(navController: NavController) {
         onDispose { mediaPlayer?.release() }
     }
 
+    // ── Instantly refresh recording state when returning from Record tab ──
+    val lifecycleOwnerForFile = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwnerForFile) {
+        val obs = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                fileExists = audioFile.exists()
+            }
+        }
+        lifecycleOwnerForFile.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwnerForFile.lifecycle.removeObserver(obs) }
+    }
+
     // ── Request permissions once, after the user has logged in ───────────
     // Data-load lambda extracted so it can be called after permissions are granted
     val loadData: suspend () -> Unit = {
@@ -167,7 +179,13 @@ fun DashboardScreen(navController: NavController) {
         )
     }
 
-    val bgGradient = Brush.verticalGradient(listOf(DarkBg, DarkSurface))
+    val bgGradient = Brush.verticalGradient(
+        listOf(
+            Color(0xFFF0F6FF),   // soft ice blue top
+            Color(0xFFEBF4FF),   // cool mid
+            Color(0xFFF5F0FF)    // faint lavender bottom
+        )
+    )
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -190,6 +208,28 @@ fun DashboardScreen(navController: NavController) {
                 .fillMaxSize()
                 .background(bgGradient)
         ) {
+            // Decorative soft teal orb — top right
+            Box(
+                modifier = Modifier
+                    .size(260.dp)
+                    .offset(x = 80.dp, y = (-60).dp)
+                    .background(
+                        Brush.radialGradient(listOf(Color(0xFF00BCD4).copy(alpha = 0.10f), Color.Transparent)),
+                        androidx.compose.foundation.shape.CircleShape
+                    )
+                    .align(Alignment.TopEnd)
+            )
+            // Decorative soft purple orb — bottom left
+            Box(
+                modifier = Modifier
+                    .size(220.dp)
+                    .offset(x = (-70).dp, y = 60.dp)
+                    .background(
+                        Brush.radialGradient(listOf(Color(0xFF7C4DFF).copy(alpha = 0.07f), Color.Transparent)),
+                        androidx.compose.foundation.shape.CircleShape
+                    )
+                    .align(Alignment.BottomStart)
+            )
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -307,7 +347,7 @@ fun DashboardScreen(navController: NavController) {
                         val display = deviceContacts.firstOrNull { normalizePhone(it.phone) == normalized }?.phone ?: normalized
                         Card(
                             shape  = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2E42)),
+                            colors = CardDefaults.cardColors(containerColor = DarkCard),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -461,19 +501,33 @@ fun SilentBottomBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
         Icons.Default.Mic      to "Record",
         Icons.Default.Settings to "Settings"
     )
-    NavigationBar(containerColor = DarkCard, tonalElevation = 0.dp) {
+    NavigationBar(
+        containerColor  = Color.White,
+        tonalElevation  = 0.dp,
+        modifier        = Modifier
+            .background(
+                Brush.verticalGradient(listOf(Color(0xFFF8FBFF), Color.White)),
+                RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            )
+    ) {
         items.forEachIndexed { index, (icon, label) ->
             NavigationBarItem(
                 selected = selectedTab == index,
                 onClick  = { onTabSelected(index) },
-                icon     = { Icon(icon, contentDescription = label) },
-                label    = { Text(label, fontSize = 11.sp) },
+                icon     = {
+                    Icon(
+                        icon,
+                        contentDescription = label,
+                        modifier = if (selectedTab == index) Modifier.size(26.dp) else Modifier.size(22.dp)
+                    )
+                },
+                label    = { Text(label, fontSize = 11.sp, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) },
                 colors   = NavigationBarItemDefaults.colors(
                     selectedIconColor   = Teal400,
                     selectedTextColor   = Teal400,
                     unselectedIconColor = SubText,
                     unselectedTextColor = SubText,
-                    indicatorColor      = Teal400.copy(alpha = 0.15f)
+                    indicatorColor      = Teal400.copy(alpha = 0.12f)
                 )
             )
         }

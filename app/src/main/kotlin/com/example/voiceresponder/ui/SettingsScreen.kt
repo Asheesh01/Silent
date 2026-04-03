@@ -1,4 +1,4 @@
-﻿package com.example.voiceresponder.ui
+package com.example.voiceresponder.ui
 
 import android.widget.Toast
 import androidx.compose.animation.*
@@ -112,7 +112,7 @@ fun SettingsScreen(navController: NavController) {
             .build()
     }
 
-    val bgGradient = Brush.verticalGradient(listOf(DarkBg, DarkSurface))
+    val bgGradient = Brush.verticalGradient(listOf(Color(0xFFF0F6FF), Color(0xFFEBF4FF), Color(0xFFF5F0FF)))
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -209,7 +209,7 @@ fun SettingsScreen(navController: NavController) {
                                 onChange = { smsEnabled = it },
                                 icon     = Icons.Default.Sms
                             )
-                            HorizontalDivider(color = Color(0xFF1E1E2E), thickness = 0.5.dp)
+                            HorizontalDivider(color = Color(0xFFDDE6EF), thickness = 0.5.dp)
                             ToggleSetting(
                                 title    = "Push Notifications",
                                 subtitle = "Notify app users instantly via FCM",
@@ -347,7 +347,7 @@ fun SettingsScreen(navController: NavController) {
                                     shape           = RoundedCornerShape(12.dp),
                                     colors          = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor   = Teal400,
-                                        unfocusedBorderColor = Color(0xFF2A3A50),
+                                        unfocusedBorderColor = Color(0xFFBBCCDD),
                                         focusedTextColor     = OnDarkText,
                                         unfocusedTextColor   = OnDarkText,
                                         cursorColor          = Teal400
@@ -518,10 +518,10 @@ private fun ChipRow(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(if (isSelected) Teal400.copy(alpha = 0.20f) else Color(0xFF1A2535))
+                    .background(if (isSelected) Teal400.copy(alpha = 0.15f) else Color(0xFFEEF4FA))
                     .border(
                         width = 1.dp,
-                        color = if (isSelected) Teal400 else Color(0xFF2A3A50),
+                        color = if (isSelected) Teal400 else Color(0xFFBBCCDD),
                         shape = RoundedCornerShape(20.dp)
                     )
                     .clickable { onSelect(option) }
@@ -575,7 +575,7 @@ private fun ExpandableCard(
                 exit     = shrinkVertically(tween(180)) + fadeOut(tween(180))
             ) {
                 Column {
-                    HorizontalDivider(color = Color(0xFF1E1E2E), thickness = 0.5.dp)
+                    HorizontalDivider(color = Color(0xFFDDE6EF), thickness = 0.5.dp)
                     content()
                 }
             }

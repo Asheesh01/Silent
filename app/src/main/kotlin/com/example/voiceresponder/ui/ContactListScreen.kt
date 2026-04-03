@@ -114,7 +114,7 @@ fun ContactListScreen(navController: NavController) {
         }
     }
 
-    val bgGradient = Brush.verticalGradient(listOf(DarkBg, DarkSurface))
+    val bgGradient = Brush.verticalGradient(listOf(Color(0xFFF0F6FF), Color(0xFFEBF4FF), Color(0xFFF5F0FF)))
 
     Scaffold(
         containerColor   = Color.Transparent,

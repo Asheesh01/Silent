@@ -83,7 +83,7 @@ fun RecordAudioScreen(navController: NavController) {
         label = "pulseScale"
     )
 
-    val bgGradient = Brush.verticalGradient(listOf(DarkBg, DarkSurface))
+    val bgGradient = Brush.verticalGradient(listOf(Color(0xFFF0F6FF), Color(0xFFEBF4FF), Color(0xFFF5F0FF)))
 
     // ── Delete confirmation dialog ──────────────────────────────────────────
     if (showDeleteDlg) {

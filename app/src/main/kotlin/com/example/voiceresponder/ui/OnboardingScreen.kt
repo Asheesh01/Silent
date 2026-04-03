@@ -97,7 +97,7 @@ fun OnboardingScreen(navController: NavController) {
                             .clip(CircleShape)
                             .background(
                                 if (index == currentPage) Teal400
-                                else Color(0xFF2A3A50)
+                                else Color(0xFFBBCCDD)
                             )
                     )
                 }

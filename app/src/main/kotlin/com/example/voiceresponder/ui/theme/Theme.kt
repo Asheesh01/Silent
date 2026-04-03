@@ -1,42 +1,46 @@
 package com.example.voiceresponder.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 // ── Silent Mode colour palette ──────────────────────────────────────────────
-val Teal400      = Color(0xFF00BCD4)
-val Teal600      = Color(0xFF00838F)
-val DarkBg       = Color(0xFF0F172A)
-val DarkSurface  = Color(0xFF1E293B)
-val DarkCard     = Color(0xFF1E2D45)
-val OnDarkText   = Color(0xFFECEFF1)
-val SubText      = Color(0xFF94A3B8)
-val ErrorRed     = Color(0xFFCF6679)
-val SelectedGreen = Color(0xFF00E676)
+val Teal400       = Color(0xFF00ACC1)   // vibrant cyan-teal
+val Teal600       = Color(0xFF00838F)   // deeper teal for gradients
+val DarkBg        = Color(0xFFF2F6FF)   // soft cool-white page background
+val DarkSurface   = Color(0xFFE4EEFF)   // subtle blue-tinted surface
+val DarkCard      = Color(0xFFFFFFFF)   // pure white cards
+val OnDarkText    = Color(0xFF0D1B3E)   // deep navy for titles
+val SubText       = Color(0xFF5B7399)   // muted blue-grey subtitle
+val ErrorRed      = Color(0xFFD32F2F)
+val SelectedGreen = Color(0xFF2E7D32)
 
-private val SilentDarkScheme = darkColorScheme(
-    primary          = Teal400,
-    onPrimary        = Color(0xFF003040),
-    primaryContainer = Color(0xFF004D5C),
-    onPrimaryContainer = OnDarkText,
-    secondary        = Teal600,
-    onSecondary      = Color.White,
-    tertiary         = Color(0xFF7C4DFF),
-    background       = DarkBg,
-    surface          = DarkSurface,
-    surfaceVariant   = DarkCard,
-    onBackground     = OnDarkText,
-    onSurface        = OnDarkText,
-    onSurfaceVariant = SubText,
-    error            = ErrorRed
+// ── Extra accent colours used in gradients ───────────────────────────────────
+val AccentPurple  = Color(0xFF7C4DFF)   // purple gradient stop
+val AccentTeal    = Color(0xFF00BCD4)   // bright teal gradient stop
+
+private val SilentLightScheme = lightColorScheme(
+    primary            = Teal400,
+    onPrimary          = Color.White,
+    primaryContainer   = Color(0xFFB2EBF2),
+    onPrimaryContainer = Color(0xFF002B30),
+    secondary          = Teal600,
+    onSecondary        = Color.White,
+    tertiary           = AccentPurple,
+    background         = DarkBg,
+    surface            = DarkSurface,
+    surfaceVariant     = DarkCard,
+    onBackground       = OnDarkText,
+    onSurface          = OnDarkText,
+    onSurfaceVariant   = SubText,
+    error              = ErrorRed
 )
 
 @Composable
 fun PersonalizedVoiceResponderTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = SilentDarkScheme,
+        colorScheme = SilentLightScheme,
         typography  = MaterialTheme.typography,
         content     = content
     )

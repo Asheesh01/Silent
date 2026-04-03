@@ -283,10 +283,10 @@ fun LoginScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
-                    Text("Login", fontWeight = FontWeight.Bold, color = OnDarkText, fontSize = 22.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Text("Sign in to continue", fontSize = 12.sp, color = SubText)
-                    Spacer(Modifier.height(20.dp))
+                    Text("Login", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 22.sp)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text("Sign in to continue", fontSize = 12.sp, color = Color(0xFFB0BEC5))
+                                    Spacer(Modifier.height(20.dp))
 
                     // Email
                     OutlinedTextField(
@@ -449,10 +449,10 @@ fun LoginScreen(navController: NavController) {
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
 @Composable
-fun OrDivider() {
+fun OrDivider(textColor: Color = Color(0xFF8899AA)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Divider(modifier = Modifier.weight(1f), color = Color(0xFF1E3048), thickness = 1.dp)
-        Text("  OR  ", color = SubText, fontSize = 12.sp)
+        Text("  OR  ", color = textColor, fontSize = 12.sp)
         Divider(modifier = Modifier.weight(1f), color = Color(0xFF1E3048), thickness = 1.dp)
     }
 }

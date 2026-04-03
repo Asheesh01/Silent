@@ -266,9 +266,9 @@ fun SignUpScreen(navController: NavController) {
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.padding(24.dp)) {
-                                    Text("Sign Up", fontWeight = FontWeight.Bold, color = OnDarkText, fontSize = 22.sp)
+                                    Text("Sign Up", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 22.sp)
                                     Spacer(Modifier.height(4.dp))
-                                    Text("Join Silent Mode today", fontSize = 12.sp, color = SubText)
+                                    Text("Join Silent Mode today", fontSize = 12.sp, color = Color(0xFFB0BEC5))
                                     Spacer(Modifier.height(20.dp))
 
                                     // Email
@@ -393,14 +393,30 @@ fun SignUpScreen(navController: NavController) {
                                     OrDivider()
                                     Spacer(Modifier.height(14.dp))
 
-                                    // Google Sign-Up
-                                    GoogleSignInButton(
-                                        text    = "Sign up with Google",
-                                        enabled = !isLoading
+                                    // Google Sign-Up — dark-card friendly teal-outlined style
+                                    OutlinedButton(
+                                        onClick  = {
+                                            googleClient.signOut().addOnCompleteListener {
+                                                googleLauncher.launch(googleClient.signInIntent)
+                                            }
+                                        },
+                                        enabled  = !isLoading,
+                                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                                        shape    = RoundedCornerShape(14.dp),
+                                        border   = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF00BCD4)),
+                                        colors   = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = Color(0xFF0D1B2A),
+                                            contentColor   = Color.White
+                                        )
                                     ) {
-                                        googleClient.signOut().addOnCompleteListener {
-                                            googleLauncher.launch(googleClient.signInIntent)
+                                        Box(
+                                            modifier = Modifier.size(22.dp).clip(CircleShape).background(Color.White),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("G", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4285F4))
                                         }
+                                        Spacer(Modifier.width(12.dp))
+                                        Text("Sign up with Google", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                                     }
 
                                     Spacer(Modifier.height(20.dp))
@@ -410,9 +426,9 @@ fun SignUpScreen(navController: NavController) {
                                         horizontalArrangement = Arrangement.Center,
                                         verticalAlignment     = Alignment.CenterVertically
                                     ) {
-                                        Text("Already have an account? ", color = SubText, fontSize = 13.sp)
+                                        Text("Already have an account? ", color = Color(0xFFB0BEC5), fontSize = 13.sp)
                                         TextButton(onClick = { navController.popBackStack() }, contentPadding = PaddingValues(0.dp)) {
-                                            Text("Login", color = Color(0xFF00BCD4), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            Text("Login", color = Color(0xFF00E5FF), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                         }
                                     }
                                 }

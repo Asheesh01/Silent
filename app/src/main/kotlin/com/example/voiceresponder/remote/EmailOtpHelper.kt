@@ -41,16 +41,49 @@ object  EmailOtpHelper {
      * SHA-256 hash is kept by OtpSecurityManager.
      */
     suspend fun sendOtp(toEmail: String, otp: String): EmailResult = withContext(Dispatchers.IO) {
-        try {
+        sendViaEmailJS(
+            toEmail      = toEmail,
+            templateId   = BuildConfig.EMAILJS_TEMPLATE_ID,
+            templateParams = JSONObject().apply {
+                put("to_email", toEmail)
+                put("otp_code", otp)
+                put("app_name", "Replora")
+            }
+        )
+    }
+
+    /**
+     * Sends a password-reset 6-digit [code] to [toEmail] via EmailJS.
+     * Uses the dedicated reset template so the email body is clearly
+     * "reset your password" — not a signup verification code.
+     * Sent through your Gmail → lands in inbox, not spam.
+     */
+    suspend fun sendPasswordResetCode(toEmail: String, code: String): EmailResult =
+        withContext(Dispatchers.IO) {
+            sendViaEmailJS(
+                toEmail      = toEmail,
+                templateId   = BuildConfig.EMAILJS_RESET_TEMPLATE_ID,
+                templateParams = JSONObject().apply {
+                    put("to_email",   toEmail)
+                    put("reset_code", code)
+                    put("app_name",   "Replora")
+                }
+            )
+        }
+
+    // ── Internal helper ───────────────────────────────────────────────────────
+
+    private fun sendViaEmailJS(
+        toEmail        : String,
+        templateId     : String,
+        templateParams : JSONObject
+    ): EmailResult {
+        return try {
             val payload = JSONObject().apply {
-                put("service_id",   BuildConfig.EMAILJS_SERVICE_ID)
-                put("template_id",  BuildConfig.EMAILJS_TEMPLATE_ID)
-                put("user_id",      BuildConfig.EMAILJS_PUBLIC_KEY)
-                put("template_params", JSONObject().apply {
-                    put("to_email",  toEmail)
-                    put("otp_code",  otp)
-                    put("app_name",  "Silent Mode")
-                })
+                put("service_id",    BuildConfig.EMAILJS_SERVICE_ID)
+                put("template_id",   templateId)
+                put("user_id",       BuildConfig.EMAILJS_PUBLIC_KEY)
+                put("template_params", templateParams)
             }
 
             val body = payload.toString()
@@ -64,22 +97,21 @@ object  EmailOtpHelper {
 
             val responseText = client.newCall(request).execute().use { response ->
                 val text = response.body?.string() ?: ""
-                Log.d(TAG, "EmailJS [${response.code}]: $text")
+                Log.d(TAG, "EmailJS [${response.code}] template=$templateId : $text")
                 text
             }
 
-            return@withContext when {
+            when {
                 responseText.contains("OK", ignoreCase = true) ->
                     EmailResult(true)
                 responseText.contains("service", ignoreCase = true) ||
                 responseText.contains("template", ignoreCase = true) ->
-                    EmailResult(false, "EmailJS not configured — check Service/Template/Key IDs.")
+                    EmailResult(false, "EmailJS not configured — check template ID.")
                 responseText.contains("limit", ignoreCase = true) ->
-                    EmailResult(false, "EmailJS monthly limit reached. Try again next month.")
+                    EmailResult(false, "EmailJS monthly limit reached.")
                 else ->
                     EmailResult(false, "Email send failed: $responseText")
             }
-
         } catch (e: java.net.UnknownHostException) {
             EmailResult(false, "No internet connection.")
         } catch (e: java.net.SocketTimeoutException) {

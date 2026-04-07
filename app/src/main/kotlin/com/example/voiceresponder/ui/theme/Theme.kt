@@ -5,13 +5,13 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// ── Silent Mode colour palette ──────────────────────────────────────────────
+// -- Replora colour palette --------------------------------------------──
 val Teal400       = Color(0xFF00ACC1)   // vibrant cyan-teal
 val Teal600       = Color(0xFF00838F)   // deeper teal for gradients
-val DarkBg        = Color(0xFFF2F6FF)   // soft cool-white page background
-val DarkSurface   = Color(0xFFE4EEFF)   // subtle blue-tinted surface
-val DarkCard      = Color(0xFFF5F9FF)   // premium frosted ice-blue (not stark white)
-val CardInput     = Color(0xFFECF3FF)   // slightly deeper tint for input fields
+val DarkBg        = Color(0xFFEFF6FF)   // teal-cool page background
+val DarkSurface   = Color(0xFFDFEDFF)   // subtle teal-tinted surface
+val DarkCard      = Color(0xFFE2EFFF)   // teal-blue frosted card (matches glow theme)
+val CardInput     = Color(0xFFD6E8FF)   // deeper teal-blue for input fields
 val OnDarkText    = Color(0xFF0D1B3E)   // deep navy for titles
 val SubText       = Color(0xFF5B7399)   // muted blue-grey subtitle
 val ErrorRed      = Color(0xFFD32F2F)

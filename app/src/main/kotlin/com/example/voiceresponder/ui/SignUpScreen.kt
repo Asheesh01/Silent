@@ -201,7 +201,7 @@ fun SignUpScreen(navController: NavController) {
     }
 
     // ── UI ────────────────────────────────────────────────────────────────────
-    Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
+    Box(modifier = Modifier.fillMaxSize().background(bgGradient).drawEdgeGlows()) {
 
         // Decorative glowing orb — top-left
         Box(
@@ -243,10 +243,10 @@ fun SignUpScreen(navController: NavController) {
                 Icon(Icons.Default.Mic, null, tint = Color.White, modifier = Modifier.size(38.dp))
             }
             Spacer(Modifier.height(16.dp))
-            Text("Silent Mode",          fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = OnDarkText)
+            Text("Replora",          fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = OnDarkText)
             Text("Smart Auto Responder", fontSize = 13.sp,                                    color = SubText)
             Spacer(Modifier.height(6.dp))
-            Text("Create your account ✨", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF00BCD4))
+            Text("Create your account ✨", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE040FB))
 
             AnimatedContent(
                 targetState   = stage,
@@ -270,7 +270,7 @@ fun SignUpScreen(navController: NavController) {
                                 Column(modifier = Modifier.padding(24.dp)) {
                                     Text("Sign Up", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 22.sp)
                                     Spacer(Modifier.height(4.dp))
-                                    Text("Join Silent Mode today", fontSize = 12.sp, color = Color(0xFFB0BEC5))
+                                    Text("Join Replora today", fontSize = 12.sp, color = Color(0xFFB0BEC5))
                                     Spacer(Modifier.height(20.dp))
 
                                     // Email
@@ -333,11 +333,15 @@ fun SignUpScreen(navController: NavController) {
                                         colors               = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor      = if (passwordMismatch) ErrorRed else Color(0xFF00BCD4),
                                             unfocusedBorderColor    = if (passwordMismatch) ErrorRed else Color(0xFF1E3048),
-                                            focusedTextColor        = OnDarkText,
-                                            unfocusedTextColor      = OnDarkText,
+                                            errorBorderColor        = ErrorRed,
+                                            focusedTextColor        = Color.White,
+                                            unfocusedTextColor      = Color(0xFFE0E8F0),
+                                            errorTextColor          = Color.White,
                                             cursorColor             = Color(0xFF00BCD4),
+                                            errorCursorColor        = Color(0xFF00BCD4),
                                             focusedContainerColor   = Color(0xFF0A1622),
-                                            unfocusedContainerColor = Color(0xFF0A1622)
+                                            unfocusedContainerColor = Color(0xFF0D1B2A),
+                                            errorContainerColor     = Color(0xFF0A1622)
                                         ),
                                         modifier = Modifier.fillMaxWidth()
                                     )
@@ -400,9 +404,7 @@ fun SignUpScreen(navController: NavController) {
                                         onClick  = {
                                             if (!isGoogleLoading) {
                                                 isGoogleLoading = true
-                                                googleClient.signOut().addOnCompleteListener {
-                                                    googleLauncher.launch(googleClient.signInIntent)
-                                                }
+                                                googleLauncher.launch(googleClient.signInIntent)
                                             }
                                         },
                                         enabled  = !isLoading && !isGoogleLoading,
@@ -498,20 +500,23 @@ fun SignUpScreen(navController: NavController) {
                                     OutlinedTextField(
                                         value           = otpCode,
                                         onValueChange   = { if (it.length <= 6 && it.all { c -> c.isDigit() }) { otpCode = it; errorMessage = "" } },
-                                        label           = { Text("6-digit code") },
-                                        placeholder     = { Text("••••••", color = SubText) },
+                                        label           = { Text("6-digit code", color = SubText) },
+                                        placeholder     = { Text("Enter code", color = SubText) },
                                         leadingIcon     = { Icon(Icons.Default.Lock, null, tint = Color(0xFF00BCD4)) },
                                         singleLine      = true,
                                         isError         = errorMessage.isNotEmpty(),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         shape           = RoundedCornerShape(14.dp),
                                         colors          = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor      = Color(0xFF00BCD4),
                                             unfocusedBorderColor    = Color(0xFF1E3048),
                                             errorBorderColor        = ErrorRed,
-                                            focusedTextColor        = OnDarkText,
-                                            unfocusedTextColor      = OnDarkText,
+                                            focusedTextColor        = Color.White,
+                                            unfocusedTextColor      = Color.White,
+                                            errorTextColor          = Color.White,
                                             cursorColor             = Color(0xFF00BCD4),
+                                            focusedLabelColor       = Color(0xFF00BCD4),
+                                            unfocusedLabelColor     = SubText,
                                             focusedContainerColor   = Color(0xFF0A1622),
                                             unfocusedContainerColor = Color(0xFF0A1622)
                                         ),
@@ -624,9 +629,13 @@ fun SignUpScreen(navController: NavController) {
 private fun signupFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor      = Color(0xFF00BCD4),
     unfocusedBorderColor    = Color(0xFF1E3048),
-    focusedTextColor        = OnDarkText,
-    unfocusedTextColor      = OnDarkText,
+    errorBorderColor        = Color(0xFFD32F2F),
+    focusedTextColor        = Color.White,
+    unfocusedTextColor      = Color(0xFFE0E8F0),
+    errorTextColor          = Color.White,
     cursorColor             = Color(0xFF00BCD4),
+    errorCursorColor        = Color(0xFF00BCD4),
     focusedContainerColor   = Color(0xFF0A1622),
-    unfocusedContainerColor = Color(0xFF0A1622)
+    unfocusedContainerColor = Color(0xFF0D1B2A),
+    errorContainerColor     = Color(0xFF0A1622)
 )

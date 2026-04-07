@@ -4,17 +4,86 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Microphone icon in white -->
+
+    <!-- ── Blue mic stand U-shape (centered) ──────────────────────── -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,28 C49,28 45,32 45,38 L45,56 C45,62 49,66 54,66 C59,66 63,62 63,56 L63,38 C63,32 59,28 54,28 Z" />
+        android:fillColor="#00000000"
+        android:strokeColor="#4A90D9"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:pathData="M42,60 Q42,75 54,75 Q66,75 66,60" />
+
+    <!-- Stand pole -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M38,52 C38,61.4 45.1,69 54,69 C62.9,69 70,61.4 70,52 L66,52 C66,59.2 60.6,65 54,65 C47.4,65 42,59.2 42,52 Z" />
+        android:fillColor="#4A90D9"
+        android:pathData="M51.5,75 L51.5,82 L56.5,82 L56.5,75 Z" />
+
+    <!-- Stand base -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M52,70 L52,78 L56,78 L56,70 Z" />
+        android:fillColor="#4A90D9"
+        android:pathData="M43,80 L65,80 L65,83.5 L43,83.5 Z"
+        android:strokeLineCap="round" />
+
+    <!-- ── Mic body (grey geometric segments) ─────────────────────── -->
+    <!-- Outer capsule -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M44,76 L64,76 L64,80 L44,80 Z" />
+        android:fillColor="#B0B8C1"
+        android:pathData="M54,26 C46.3,26 40,32.3 40,40 L40,58 C40,65.7 46.3,72 54,72 C61.7,72 68,65.7 68,58 L68,40 C68,32.3 61.7,26 54,26 Z" />
+
+    <!-- Darker half for split effect -->
+    <path
+        android:fillColor="#8A9299"
+        android:pathData="M54,26 L54,72 C61.7,72 68,65.7 68,58 L68,40 C68,32.3 61.7,26 54,26 Z" />
+
+    <!-- Grid lines on mic - horizontal -->
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000"
+        android:pathData="M40.5,44 L67.5,44" />
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000"
+        android:pathData="M40.5,54 L67.5,54" />
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000"
+        android:pathData="M40.5,64 L67.5,64" />
+
+    <!-- Grid lines on mic - vertical -->
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000"
+        android:pathData="M54,26 L54,72" />
+
+    <!-- Diagonal grid top-left to bottom-right -->
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeWidth="1.0"
+        android:fillColor="#00000000"
+        android:pathData="M42,36 L66,66" />
+
+    <!-- Diagonal grid top-right to bottom-left -->
+    <path
+        android:strokeColor="#1A1A1A"
+        android:strokeWidth="1.0"
+        android:fillColor="#00000000"
+        android:pathData="M66,36 L42,66" />
+
+    <!-- ── Blue speech bubble (top-right of mic) ──────────────────── -->
+    <path
+        android:fillColor="#29B6F6"
+        android:pathData="M72,18 C67.6,18 64,21.1 64,25 C64,28.9 67.6,32 72,32 L72,36 L76,32 C80.4,32 84,28.9 84,25 C84,21.1 80.4,18 76,18 Z" />
+
+    <!-- Dots inside speech bubble (2x3 grid) -->
+    <path android:fillColor="#FFFFFF" android:pathData="M69.5,23.5 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M74,23.5 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M78.5,23.5 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M69.5,27.5 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M74,27.5 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M78.5,27.5 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+
 </vector>

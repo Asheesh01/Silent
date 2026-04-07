@@ -138,9 +138,14 @@ fun SetupPhoneScreen(navController: NavController) {
         }
     }
 
+    // ── Auto-launch SIM picker as soon as screen appears ─────────────────────
+    LaunchedEffect(Unit) {
+        showPhoneHint()
+    }
+
     // ── UI ────────────────────────────────────────────────────────────────────
     Box(
-        modifier         = Modifier.fillMaxSize().background(bgGradient),
+        modifier         = Modifier.fillMaxSize().background(bgGradient).drawEdgeGlows(),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -200,14 +205,14 @@ fun SetupPhoneScreen(navController: NavController) {
                         singleLine    = true,
                         shape         = RoundedCornerShape(12.dp),
                         colors        = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor      = if (hintShown) Color(0xFF4CAF50) else Teal400,
-                            unfocusedBorderColor    = if (hintShown) Color(0xFF4CAF50) else Color(0xFFBBCCDD),
+                            focusedBorderColor      = if (hintShown) Color(0xFF4CAF50) else Color(0xFF00BCD4),
+                            unfocusedBorderColor    = if (hintShown) Color(0xFF4CAF50) else Color(0xFF7C4DFF).copy(alpha = 0.6f),
                             focusedTextColor        = OnDarkText,
                             unfocusedTextColor      = OnDarkText,
                             disabledTextColor       = OnDarkText,
                             cursorColor             = Color.Transparent,
-                            focusedContainerColor   = CardInput,
-                            unfocusedContainerColor = CardInput
+                            focusedContainerColor   = Color(0xFFD0EEFF),  // light teal
+                            unfocusedContainerColor = Color(0xFFEAE0FF)   // light violet
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )

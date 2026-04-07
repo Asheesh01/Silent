@@ -36,8 +36,8 @@ private val slides = listOf(
     OnboardingSlide(
         icon        = Icons.Default.Mic,
         iconTint    = Color(0xFF00BCD4),
-        title       = "Welcome to Silent Mode 👋",
-        description = "Silent Mode automatically replies to missed calls with your personal voice message — so callers are never left wondering."
+        title       = "Welcome to Replora 👋",
+        description = "Replora automatically replies to missed calls with your personal voice message — so callers are never left wondering."
     ),
     OnboardingSlide(
         icon        = Icons.Default.RadioButtonChecked,

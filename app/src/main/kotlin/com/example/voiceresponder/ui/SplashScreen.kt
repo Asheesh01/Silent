@@ -1,3 +1,4 @@
+@file:Suppress("UNUSED_VALUE", "SpellCheckingInspection")
 package com.example.voiceresponder.ui
 
 import androidx.compose.animation.core.*
@@ -26,8 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.voiceresponder.R
+import com.example.voiceresponder.ui.theme.drawEdgeGlows
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -233,26 +237,26 @@ fun SplashScreen(navController: NavController) {
     )
 
     Box(
-        modifier          = Modifier.fillMaxSize().background(bg),
+        modifier          = Modifier.fillMaxSize().background(bg).drawEdgeGlows(),
         contentAlignment  = Alignment.Center
     ) {
 
-        // ── Floating background dots (twinkling) ──────────────────────────────
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        // ── Canvas dots (twinkling background particles) ─────────────────────
+        val density = LocalDensity.current
+        Canvas(modifier = Modifier.fillMaxSize()) {
             splashDots.forEachIndexed { i, dot ->
                 val twinkleOffset = if (i % 2 == 0) dotTwinkle else (1.5f - dotTwinkle)
-                Box(
-                    modifier = Modifier
-                        .offset(x = maxWidth * dot.x, y = maxHeight * dot.y)
-                        .size(dot.size)
-                        .clip(CircleShape)
-                        .alpha(dot.alpha * twinkleOffset.coerceIn(0.1f, 1f))
-                        .background(Color(0xFF00E5FF))
+                val alpha   = dot.alpha * twinkleOffset.coerceIn(0.1f, 1f)
+                val radiusPx = with(density) { dot.size.toPx() / 2f }
+                drawCircle(
+                    color  = Color(0xFF00E5FF).copy(alpha = alpha),
+                    radius = radiusPx,
+                    center = Offset(size.width * dot.x, size.height * dot.y)
                 )
             }
         }
 
-        // ── Centre column ─────────────────────────────────────────────────────
+        // ── Center column ─────────────────────────────────────────────────────
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -389,7 +393,7 @@ fun SplashScreen(navController: NavController) {
 
             // ── App name ──────────────────────────────────────────────────────
             Text(
-                text       = "Silent Responder",
+                text       = "Replora",
                 fontSize   = 30.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color      = Color.White,
@@ -403,7 +407,7 @@ fun SplashScreen(navController: NavController) {
 
             // ── Tagline ───────────────────────────────────────────────────────
             Text(
-                text      = "Smart auto-replies when you're busy",
+                text      = "Smart auto-replies for missed calls",
                 fontSize  = 14.sp,
                 color     = Color(0xFF90A4AE),
                 textAlign = TextAlign.Center,

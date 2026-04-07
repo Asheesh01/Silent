@@ -31,6 +31,8 @@ import com.example.voiceresponder.data.FeedbackEntity
 import com.example.voiceresponder.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -132,6 +134,7 @@ fun SettingsScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(bgGradient)
+                .drawEdgeGlows()
         ) {
             LazyColumn(
                 modifier             = Modifier
@@ -283,7 +286,7 @@ fun SettingsScreen(navController: NavController) {
                 item {
                     ExpandableCard(
                         title    = "Share Your Feedback",
-                        subtitle = "Help us improve Silent Responder",
+                        subtitle = "Help us improve Replora",
                         icon     = Icons.Default.Feedback,
                         expanded = feedbackExpanded,
                         onToggle = { feedbackExpanded = !feedbackExpanded }
@@ -461,6 +464,9 @@ fun SettingsScreen(navController: NavController) {
                         Button(
                             onClick   = {
                                 FirebaseAuth.getInstance().signOut()
+                                // Also clear Google session so account picker shows next login
+                                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
+                                GoogleSignIn.getClient(context, gso).signOut()
                                 navController.navigate("login") {
                                     popUpTo(0) { inclusive = true }
                                 }

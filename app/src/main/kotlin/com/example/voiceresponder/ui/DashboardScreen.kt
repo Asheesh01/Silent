@@ -177,6 +177,7 @@ fun DashboardScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(bgGradient)
+                .drawEdgeGlows()
         ) {
             // Decorative soft teal orb — top right
             Box(
@@ -222,7 +223,7 @@ fun DashboardScreen(navController: NavController) {
                             Icon(Icons.Default.Mic, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
                         }
                         Spacer(Modifier.height(10.dp))
-                        Text("Silent Mode", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = OnDarkText)
+                        Text("Replora", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = OnDarkText)
                         Text("Smart Auto Responder", fontSize = 13.sp, color = SubText)
                     }
                 }
@@ -464,6 +465,7 @@ fun DashboardScreen(navController: NavController) {
 
                 item { Spacer(Modifier.height(16.dp)) }
             }
+            EdgeGlowOverlay()
         }
     }
 }

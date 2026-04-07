@@ -21,9 +21,10 @@ android {
             useSupportLibrary = true
         }
         // ── EmailJS credentials ───────────────────────────────────────────────
-        buildConfigField("String", "EMAILJS_SERVICE_ID",  "\"service_gz1d4hl\"")
-        buildConfigField("String", "EMAILJS_TEMPLATE_ID", "\"template_mkbneej\"")
-        buildConfigField("String", "EMAILJS_PUBLIC_KEY",  "\"dCW2d5SDu2ABz0h2y\"")
+        buildConfigField("String", "EMAILJS_SERVICE_ID",       "\"service_gz1d4hl\"")
+        buildConfigField("String", "EMAILJS_TEMPLATE_ID",      "\"template_mkbneej\"")   // signup OTP
+        buildConfigField("String", "EMAILJS_RESET_TEMPLATE_ID","\"template_757meha\"") // password reset
+        buildConfigField("String", "EMAILJS_PUBLIC_KEY",       "\"dCW2d5SDu2ABz0h2y\"")
     }
 
     signingConfigs {

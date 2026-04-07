@@ -12,10 +12,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 // ── Edge glow palette ─────────────────────────────────────────────────────────
-private val TopGlow    = Color(0x5500E5FF)   // cyan-teal   (top edge)
-private val BottomGlow = Color(0x557C4DFF)   // violet       (bottom edge)
-private val LeftGlow   = Color(0x44E040FB)   // purple-pink  (left edge)
-private val RightGlow  = Color(0x4400BCD4)   // teal         (right edge)
+private val TopGlow    = Color(0x1800E5FF)   // cyan-teal   (top edge)    ~9% opacity
+private val BottomGlow = Color(0x187C4DFF)   // violet       (bottom edge) ~9% opacity
+private val LeftGlow   = Color(0x14E040FB)   // purple-pink  (left edge)   ~8% opacity
+private val RightGlow  = Color(0x1400BCD4)   // teal         (right edge)  ~8% opacity
 private val Clear      = Color(0x00000000)
 
 /**

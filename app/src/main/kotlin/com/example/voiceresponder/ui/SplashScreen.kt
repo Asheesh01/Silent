@@ -393,7 +393,7 @@ fun SplashScreen(navController: NavController) {
 
             // ── App name ──────────────────────────────────────────────────────
             Text(
-                text       = "Replora",
+                text       = "Zyntra",
                 fontSize   = 30.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color      = Color.White,

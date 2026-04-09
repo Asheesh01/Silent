@@ -47,7 +47,7 @@ object  EmailOtpHelper {
             templateParams = JSONObject().apply {
                 put("to_email", toEmail)
                 put("otp_code", otp)
-                put("app_name", "Replora")
+                put("app_name", "Zyntra")
             }
         )
     }
@@ -66,7 +66,7 @@ object  EmailOtpHelper {
                 templateParams = JSONObject().apply {
                     put("to_email",   toEmail)
                     put("reset_code", code)
-                    put("app_name",   "Replora")
+                    put("app_name",   "Zyntra")
                 }
             )
         }

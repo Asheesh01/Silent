@@ -74,6 +74,15 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         selectedContacts = selectedContacts - normalized
     }
 
+    /** Deletes every selected contact from Room and clears the VM state. */
+    fun clearAllContacts(syncHelper: com.example.voiceresponder.remote.SyncHelper) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { contactDao.clearAll() }
+            selectedContacts = emptySet()
+            uid?.let { syncHelper.pushContactsToCloud(it, emptySet()) }
+        }
+    }
+
     /** Refresh contacts from Room after returning from the Contacts screen. */
     fun refreshContactsFromRoom() {
         viewModelScope.launch {

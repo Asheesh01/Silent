@@ -243,7 +243,7 @@ fun SignUpScreen(navController: NavController) {
                 Icon(Icons.Default.Mic, null, tint = Color.White, modifier = Modifier.size(38.dp))
             }
             Spacer(Modifier.height(16.dp))
-            Text("Replora",          fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = OnDarkText)
+            Text("Zyntra",           fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = OnDarkText)
             Text("Smart Auto Responder", fontSize = 13.sp,                                    color = SubText)
             Spacer(Modifier.height(6.dp))
             Text("Create your account ✨", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE040FB))
@@ -270,7 +270,7 @@ fun SignUpScreen(navController: NavController) {
                                 Column(modifier = Modifier.padding(24.dp)) {
                                     Text("Sign Up", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 22.sp)
                                     Spacer(Modifier.height(4.dp))
-                                    Text("Join Replora today", fontSize = 12.sp, color = Color(0xFFB0BEC5))
+                                    Text("Join Zyntra today", fontSize = 12.sp, color = Color(0xFFB0BEC5))
                                     Spacer(Modifier.height(20.dp))
 
                                     // Email

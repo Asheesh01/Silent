@@ -286,7 +286,7 @@ fun SettingsScreen(navController: NavController) {
                 item {
                     ExpandableCard(
                         title    = "Share Your Feedback",
-                        subtitle = "Help us improve Replora",
+                        subtitle = "Help us improve Zyntra",
                         icon     = Icons.Default.Feedback,
                         expanded = feedbackExpanded,
                         onToggle = { feedbackExpanded = !feedbackExpanded }

@@ -66,8 +66,9 @@ fun DashboardScreen(navController: NavController) {
     // Audio state (local — not needed in ViewModel)
     val audioFile   = remember { File(context.filesDir, "default_response.mp4") }
     var isPlaying   by remember { mutableStateOf(false) }
-    var showDelDlg  by remember { mutableStateOf(false) }
-    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    var showDelDlg    by remember { mutableStateOf(false) }
+    var showDelAllDlg by remember { mutableStateOf(false) }
+    var mediaPlayer   by remember { mutableStateOf<MediaPlayer?>(null) }
 
     DisposableEffect(Unit) {
         onDispose { mediaPlayer?.release() }
@@ -149,6 +150,27 @@ fun DashboardScreen(navController: NavController) {
         )
     }
 
+    // ── Delete ALL contacts confirmation dialog ────────────────────────────
+    val syncHelperForDelAll = remember { SyncHelper() }
+    if (showDelAllDlg) {
+        AlertDialog(
+            onDismissRequest = { showDelAllDlg = false },
+            containerColor   = DarkCard,
+            title = { Text("Remove All Contacts?", color = OnDarkText) },
+            text  = { Text("This will remove all ${selectedContacts.size} selected contact${if (selectedContacts.size == 1) "" else "s"} from the auto-responder list.", color = SubText) },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.clearAllContacts(syncHelperForDelAll)
+                    showDelAllDlg = false
+                    Toast.makeText(context, "All contacts removed", Toast.LENGTH_SHORT).show()
+                }) { Text("Remove All", color = ErrorRed, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDelAllDlg = false }) { Text("Cancel", color = SubText) }
+            }
+        )
+    }
+
     val bgGradient = Brush.verticalGradient(
         listOf(
             Color(0xFFF0F6FF),   // soft ice blue top
@@ -223,7 +245,7 @@ fun DashboardScreen(navController: NavController) {
                             Icon(Icons.Default.Mic, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
                         }
                         Spacer(Modifier.height(10.dp))
-                        Text("Replora", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = OnDarkText)
+                        Text("Zyntra", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = OnDarkText)
                         Text("Smart Auto Responder", fontSize = 13.sp, color = SubText)
                     }
                 }
@@ -293,8 +315,24 @@ fun DashboardScreen(navController: NavController) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Selected Contacts", fontWeight = FontWeight.SemiBold, color = OnDarkText, fontSize = 15.sp)
-                        TextButton(onClick = { navController.navigate("contacts") }) {
-                            Text("Manage", color = Teal400, fontSize = 13.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Delete-all button — only shown when there are contacts
+                            if (selectedContacts.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { showDelAllDlg = true },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.DeleteSweep,
+                                        contentDescription = "Remove all contacts",
+                                        tint     = Color(0xFFEF5350),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            TextButton(onClick = { navController.navigate("contacts") }) {
+                                Text("Manage", color = Teal400, fontSize = 13.sp)
+                            }
                         }
                     }
                 }

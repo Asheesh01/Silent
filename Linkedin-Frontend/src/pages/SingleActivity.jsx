@@ -1,8 +1,8 @@
 import React from "react";
 import ProfileCard from "../../Profilecard/profilecard";
-import Card from "../../components/card/card";
-import Post from "../../components/Post/Post";
-import Advertisment from "../../components/Advertisment/Advertisment";
+import Card from "../../../Linkedin-Frontend/src/components/components/card/card";
+import Post from "../../../Linkedin-Frontend/src/components/components/Post/Post";
+import Advertisment from "../../../Linkedin-Frontend/src/components/components/Advertisment/Advertisment";
 
 export default function SingleActivity() {
     return (

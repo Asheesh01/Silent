@@ -5,7 +5,6 @@ const NotificationModal = require('../model/Notification');
 const { OAuth2Client } = require('google-auth-library');
 const jwt = require("jsonwebtoken");
 
-
 const cookieOptions = {
     httpOnly: true,
     secure: true,
@@ -109,7 +108,6 @@ exports.login = async (req, res) => {
 
     }
 }
-
 exports.updateUser = async (req, res) => {
     try {
         const { user } = req.body;

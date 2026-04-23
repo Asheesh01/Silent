@@ -1,8 +1,12 @@
-const mongoose = require('mongoose');
-// LinkedInClone
+// connection.js
+const mongoose = require("mongoose");
+require("dotenv").config();
 
-mongoose.connect('mongodb://127.0.0.1:27017/LinkedInClone').then(res => {
-    console.log("Database fully conneted")
-}).catch(err => {
-    console.log(err)
+const connectionString = process.env.CONNECTION_STRING;
+
+mongoose.connect(connectionString, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
 })
+  .then(() => console.log("MongoDB connected successfully"))
+  .catch((err) => console.error("MongoDB connection error:", err));

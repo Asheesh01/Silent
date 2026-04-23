@@ -61,7 +61,7 @@ export default function Message() {
   const fetchConversationonLoad = async () => {
     try {
       const res = await axios.get(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/conversation/get-conversatio`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/conversation/get-conversation`,
         { withCredentials: true }
       );
       setConversation(res.data.conversastion);

@@ -3,7 +3,6 @@ const router = express.Router();
 const userController = require('../controller/user');
 const authentication = require("../authenticatins/auth")
 
-
 router.post('/register', userController.register)
 router.post("/login", userController.login)
 router.post("/google", userController.loginThroughGmail)
@@ -16,7 +15,6 @@ router.get("/self", authentication.auth, (req, res) => {
         user: req.user
     })
 })
-
 router.get('/findUser', authentication.auth, userController.findUser);
 
 router.post('/sendFriendReq', authentication.auth, userController.sendFriendRequest);

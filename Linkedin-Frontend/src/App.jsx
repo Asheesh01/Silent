@@ -14,19 +14,11 @@ import Profile from './pages/Profile/Profile'
 import Allactivities from './pages/Allactivities/Allactivites'
 import SingleActivity from './pages/Singleactivity/SingleActivity'
 import Notification from './pages/Notification/Notification'
-
 function App() {
   const [isLogin, setIsLogin] = useState(localStorage.getItem("isLogin"));
-
   const changeLoginValue = (val) => {
     setIsLogin(val)
-
   }
-
-
-
-
-
   return (
     <div>
       {isLogin ? <Navbar2 /> : <Navbar />}
@@ -37,7 +29,7 @@ function App() {
 
         <Route path='/Login' element={isLogin ? <Navigate to={'/feed'} /> : <Login changeLoginValue={changeLoginValue} />} />
 
-        <Route path='feed' element={isLogin ? <Feeds /> : <Navigate to={'/Login'} />} />
+        <Route path='/feed' element={isLogin ? <Feeds /> : <Navigate to={'/Login'} />} />
 
         <Route path='/mynetwork' element={isLogin ? <MyNetwork /> : <Navigate to={'/Login'} />} />
 
@@ -52,9 +44,6 @@ function App() {
         <Route path='/profile/:id/activities/:postId' element={isLogin ? <SingleActivity /> : <Navigate to={'/Login'} />} />
 
         <Route path='/Notifications' element={isLogin ? <Notification /> : <Navigate to={'/Login'} />} />
-
-
-
       </Routes>
       <Footer />
     </div>

@@ -9,7 +9,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function Post({ profile, item, key, personalData }) {
+export default function Post({ profile, item, personalData }) {
     const [seeMore, setSeeMore] = useState(false);
     const [comment, setComment] = useState(false);
     const [commentInput, setCommentInput] = useState("");
@@ -36,14 +36,9 @@ export default function Post({ profile, item, key, personalData }) {
 
     useEffect(()=>{
         if (!personalData || !personalData._id) return;
-        let selfId=personalData?._id;
-        item?.likes?.map((i)=>{
-            if(i.toString()===selfId.toString()){
-                setlike(true);
-            } else{
-                setlike(false);
-            }
-        })
+        const selfId = personalData._id.toString();
+        const hasLiked = item?.likes?.some((i) => i.toString() === selfId);
+        setlike(hasLiked || false);
     },[])
 
     const handleLikeFunc = async () => {

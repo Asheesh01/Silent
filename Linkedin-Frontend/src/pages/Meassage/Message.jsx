@@ -105,12 +105,12 @@ export default function Message() {
   };
 
   useEffect(() => {
-    socket.on('recieveMessage', (response) => {
+    socket.on('receiveMessage', (response) => {
       setMeesages((prev) => [...prev, response]);
     });
 
     return () => {
-      socket.off('recieveMessage');
+      socket.off('receiveMessage');
     };
   }, []);
 

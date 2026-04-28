@@ -12,10 +12,8 @@ import AboutModal from "../../components/AboutModal/AboutModal";
 import ExpModal from "../../components/expModal/expModal";
 import MessageModal from "../../components/MesssageModel/MessageModel";
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt';
-import { LineAxis } from "@mui/icons-material";
-import { data, Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import axios from "axios";
-import { useParams } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 
 export default function Profile() {
@@ -205,7 +203,7 @@ export default function Profile() {
             await navigator.clipboard.writeText(string);
             toast.success('copied to Clipboard')
         } catch (err) {
-            console.err('Failed to Copy!', err);
+            console.error('Failed to Copy!', err);
         }
     }
 
@@ -397,7 +395,7 @@ export default function Profile() {
 
                                         <div className="text-gray-700">{userData?.headline}</div>
                                         <div className="text-sm text-gray-500">{userData?.curr_location}</div>
-                                        <div className="text-md text-blue-800 w-fit cursor-pointer hover:underline">{userData?.friends.length} Connection</div>
+                                        <div className="text-md text-blue-800 w-fit cursor-pointer hover:underline">{userData?.friends?.length ?? 0} Connection</div>
 
                                         <div className="md:flex w-full justify-between">
                                             <div className="my-5 flex gap-5">
@@ -580,7 +578,7 @@ export default function Profile() {
                                             <div className="text-sm text-gray-500">{item.duration}</div>
                                             <div className="text-sm text-gray-500">{item.location}</div>
                                         </div>
-                                        {userData?._id === ownData._id && (
+                                        {userData?._id === ownData?._id && (
                                             <motion.div 
                                                 onClick={() => { updateExpEdit(item._id, item) }} 
                                                 className="cursor-pointer"

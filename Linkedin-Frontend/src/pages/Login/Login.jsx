@@ -1,60 +1,211 @@
 import React, { useState } from "react";
-import { Form, Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import GoogleLoginComp from "../../components/GoogleLogin/GoogleLogin";
-import { ToastContainer, toast } from 'react-toastify'
-import axios from 'axios'
+import { ToastContainer, toast } from "react-toastify";
+import axios from "axios";
 
 export default function Login(props) {
     const navigate = useNavigate();
-    const [loginField, setLoginField] = useState({ email: "", password: "" })
+    const [loginField, setLoginField] = useState({ email: "", password: "" });
+    const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const onChangeInput = (event, key) => {
-        setLoginField({ ...loginField, [key]: event.target.value })
-    }
-    console.log(loginField);
+        setLoginField({ ...loginField, [key]: event.target.value });
+    };
+
     const handleLogin = async () => {
         if (loginField.email.trim().length === 0 || loginField.password.trim().length === 0) {
-            return toast.error("please fill all credentials")
+            return toast.error("Please fill all credentials");
         }
-        console.log("Sending to backend:", loginField);
-
-        await axios.post( `${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/login`, loginField, { withCredentials: true }).then((res) => {
+        setLoading(true);
+        try {
+            const res = await axios.post(
+                `${import.meta.env.VITE_APP_BACKEND_URL}/api/auth/login`,
+                loginField,
+                { withCredentials: true }
+            );
             props.changeLoginValue(true);
-            localStorage.setItem('isLogin', 'true');
-            localStorage.setItem("userInfo", JSON.stringify(res.data.userExists));
+            localStorage.setItem("isLogin", "true");
+            localStorage.setItem("userInfo", JSON.stringify(res.data.user));
             localStorage.setItem("token", res.data.token);
+            toast.success("Welcome back!");
+            setTimeout(() => navigate("/feed"), 800);
+        } catch (err) {
+            console.log(err);
+            toast.error(err?.response?.data?.error || "Login failed. Try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-            navigate('/feed')
-        }).catch(err => {
-            console.log(err)
-            toast.error(err?.response?.data?.error)
-        })
-    }
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter") handleLogin();
+    };
+
+    const containerVariants = {
+        hidden: { opacity: 0, y: 30 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.6, ease: "easeOut" }
+        }
+    };
+
+    const inputVariants = {
+        focus: { scale: 1.01, transition: { duration: 0.2 } }
+    };
 
     return (
-        <div className="flex flex-col min-h-screen bg-purple-200 w-full items-center justify-center px-4 py-6 sm:py-8 md:py-10">
-            <div className="w-full sm:w-[90%] md:w-[60%] lg:w-[40%] xl:w-[28%] shadow-xl box p-6 sm:p-8 md:p-10">
-                <div className="text-2xl sm:text-3xl md:text-3xl font-semibold mb-4">
-                    Sign In
-                </div>
-                <div className="my-5 w-full">
-                    <GoogleLoginComp changeLoginValue={props.changeLoginValue} />
-                </div>
-                <div className="flex items-center gap-2 my-4">
-                    <div className="border-b-1 border-gray-400 w-[45%]"></div><div className="text-sm sm:text-base">or</div><div className="border-b-1 border-gray-400 w-[45%]"></div>
-                </div>
-                <label htmlFor="Email" className="block mb-1 text-sm sm:text-base">Email</label>
-                <input type="text" value={loginField.email} onChange={(e) => { onChangeInput(e, 'email') }} id="Email" placeholder="Email or Phone" className="text-gray-500 border-2 w-full text-base sm:text-lg md:text-xl py-2 px-3 rounded-xl border-black"></input>
-                <div className="mt-3">
-                    <label htmlFor="Password" className="block mb-1 text-sm sm:text-base">Password</label>
-                    <input type="Password" value={loginField.password} onChange={(e) => { onChangeInput(e, 'password') }} id="Password" placeholder="Password" className="text-gray-500 border-2 w-full text-base sm:text-lg md:text-xl py-2 px-3 rounded-xl border-black"></input>
-                </div>
-                <div onClick={handleLogin} className="bg-blue-800 hover:bg-blue-900 rounded-xl w-full px-4 py-3 text-white text-center cursor-pointer mt-4 text-sm sm:text-base md:text-lg font-medium">
-                    Log in
-                </div>
-            </div>
-            <div className="mt-4 mb-6 sm:mb-8 md:mb-10 text-sm sm:text-base text-center px-4"> New to LinkedIn? <Link to={'/signUp'} className="text-blue-800 cursor-pointer hover:underline font-medium">Join Now</Link></div>
-            <ToastContainer />
+        <div className="flex flex-col min-h-screen bg-purple-200 w-full items-center justify-center px-4 py-10">
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="w-full sm:w-[90%] md:w-[55%] lg:w-[42%] xl:w-[32%]"
+            >
+                {/* Logo */}
+                <motion.div
+                    className="flex items-center gap-2 mb-6 justify-center"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 }}
+                >
+                    <span className="text-blue-800 font-bold text-3xl">in</span>
+                    <span className="text-gray-700 font-semibold text-xl">LinkedIn</span>
+                </motion.div>
+
+                {/* Card */}
+                <motion.div
+                    className="bg-white rounded-2xl shadow-2xl p-8"
+                    whileHover={{ boxShadow: "0 25px 50px -12px rgba(88, 28, 135, 0.2)" }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <motion.h1
+                        className="text-2xl font-bold text-gray-800 mb-1"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                    >
+                        Sign in
+                    </motion.h1>
+                    <motion.p
+                        className="text-sm text-gray-500 mb-5"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 }}
+                    >
+                        Stay updated on your professional world
+                    </motion.p>
+
+                    {/* Google Login */}
+                    <motion.div
+                        className="mb-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.35 }}
+                    >
+                        <GoogleLoginComp changeLoginValue={props.changeLoginValue} />
+                    </motion.div>
+
+                    {/* Divider */}
+                    <div className="flex items-center gap-3 my-4">
+                        <div className="flex-1 border-t border-gray-200" />
+                        <span className="text-sm text-gray-400">or</span>
+                        <div className="flex-1 border-t border-gray-200" />
+                    </div>
+
+                    {/* Email */}
+                    <motion.div className="mb-3" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                        <label htmlFor="Email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <motion.input
+                            type="text"
+                            id="Email"
+                            value={loginField.email}
+                            onChange={(e) => onChangeInput(e, "email")}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Email or phone"
+                            whileFocus={{ scale: 1.01 }}
+                            className="w-full border-2 border-gray-200 focus:border-purple-600 outline-none rounded-xl py-2.5 px-4 text-base transition-colors"
+                        />
+                    </motion.div>
+
+                    {/* Password */}
+                    <motion.div className="mb-5" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+                        <label htmlFor="Password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <div className="relative">
+                            <motion.input
+                                type={showPassword ? "text" : "password"}
+                                id="Password"
+                                value={loginField.password}
+                                onChange={(e) => onChangeInput(e, "password")}
+                                onKeyDown={handleKeyDown}
+                                placeholder="Password"
+                                whileFocus={{ scale: 1.01 }}
+                                className="w-full border-2 border-gray-200 focus:border-purple-600 outline-none rounded-xl py-2.5 px-4 text-base transition-colors pr-12"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-700 font-semibold hover:underline cursor-pointer"
+                            >
+                                {showPassword ? "Hide" : "Show"}
+                            </button>
+                        </div>
+                    </motion.div>
+
+                    {/* Login Button */}
+                    <motion.button
+                        onClick={handleLogin}
+                        disabled={loading}
+                        className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white font-semibold rounded-full py-3 text-base cursor-pointer transition-colors relative overflow-hidden"
+                        whileHover={{ scale: loading ? 1 : 1.02, boxShadow: "0 8px 24px rgba(29, 78, 216, 0.35)" }}
+                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                    >
+                        <AnimatePresence mode="wait">
+                            {loading ? (
+                                <motion.div
+                                    key="loading"
+                                    className="flex items-center justify-center gap-2"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                >
+                                    <motion.span
+                                        className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                                    />
+                                    Signing in...
+                                </motion.div>
+                            ) : (
+                                <motion.span key="text" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                                    Sign in
+                                </motion.span>
+                            )}
+                        </AnimatePresence>
+                    </motion.button>
+                </motion.div>
+
+                {/* Footer */}
+                <motion.div
+                    className="mt-5 text-center text-sm text-gray-600"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                >
+                    New to LinkedIn?{" "}
+                    <Link to="/signUp" className="text-blue-700 font-semibold hover:underline cursor-pointer">
+                        Join now
+                    </Link>
+                </motion.div>
+            </motion.div>
+
+            <ToastContainer position="top-center" autoClose={3000} />
         </div>
-    )
+    );
 }

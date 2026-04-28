@@ -1,20 +1,54 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 export default function Navbar() {
-    return <nav className="w-[100%] bg-gray-100 md:px-[100px] px-[20px] flex justify-between py-4 box-border  items-center">
-            <Link to={"/"} className="flex gap-1 items-center cursor-pointer">
-                <h3 className="text-blue-800 font-bold text-3xl">Linked</h3>
-                <img src="https://th.bing.com/th/id/R.abdb36b128f0cfcee1329ddb1365a99b?rik=Q8UtGzuevu7ZBw&riu=http%3a%2f%2flofrev.net%2fwp-content%2fphotos%2f2017%2f04%2flinkedin_logo.jpg&ehk=WX0fSjGgisCu4YfNc2IBnr7nLADE%2f06resHyt%2fqG1pg%3d&risl=&pid=ImgRaw&r=0"
-                    alt="linkidlogo" className="h-6 w-6"></img>
+    return (
+        <motion.nav
+            className="w-full fixed top-0 left-0 z-50 bg-white/90 backdrop-blur-md shadow-sm md:px-[100px] px-[20px] flex justify-between py-3 box-border items-center border-b border-gray-100"
+            initial={{ y: -80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 120, damping: 20, duration: 0.6 }}
+        >
+            {/* Logo */}
+            <Link to="/" className="flex gap-1 items-center cursor-pointer">
+                <motion.div
+                    className="flex items-center gap-1"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                >
+                    <div className="bg-blue-700 text-white font-bold text-xl w-9 h-9 flex items-center justify-center rounded-md">
+                        in
+                    </div>
+                    <span className="text-gray-800 font-bold text-xl hidden sm:block">Linked<span className="text-blue-700">In</span></span>
+                </motion.div>
             </Link>
-        <div className="flex box-border md:gap-4 gap-2 justify-center items-center">
-            
-        <Link to={"/signUp"} className="md:px-4 md:py-2 box-border text-black rounded-3xl text-xl hover:bg-gray-200 cursor-pointer">
-            Join Now  
-            </Link>
-            <Link to={"/Login"} className="md:px-4 md:py-2 box-border border-1 border-blue-800 rounded-3xl text-xl hover:bg-blue-100 cursor-pointer ml-0"> Sign in</Link>  
-            </div>
-         
-    </nav>
-}  
+
+            {/* Nav Actions */}
+            <motion.div
+                className="flex box-border gap-3 justify-center items-center"
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+            >
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Link
+                        to="/signUp"
+                        className="md:px-5 md:py-2 px-3 py-1.5 box-border text-gray-700 font-medium rounded-full text-sm sm:text-base hover:bg-gray-100 cursor-pointer transition-colors"
+                    >
+                        Join now
+                    </Link>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Link
+                        to="/Login"
+                        className="md:px-5 md:py-2 px-3 py-1.5 box-border border-2 border-blue-700 text-blue-700 font-semibold rounded-full text-sm sm:text-base hover:bg-blue-50 cursor-pointer transition-colors"
+                    >
+                        Sign in
+                    </Link>
+                </motion.div>
+            </motion.div>
+        </motion.nav>
+    );
+}
